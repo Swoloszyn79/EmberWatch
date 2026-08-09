@@ -92,13 +92,17 @@
   .status .sentence{position:relative;font-size:15.5px;margin-top:12px;max-width:46ch;opacity:.96}
   .status .stamp{position:relative;margin-top:12px;font-size:12px;color:var(--muted)}
 
-  /* ---------- why ---------- */
+  /* ---------- why / change / watch lists ---------- */
   .why{margin-top:14px}
   .why .sec-title{margin-bottom:8px}
-  .why ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-  .why li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;padding:9px 0;border-top:1px solid var(--line-2)}
-  .why li:first-child{border-top:0}
-  .why li .ic{font-size:18px;flex:0 0 auto;line-height:1.3}
+  .why ul,ul.why-list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  .why li,ul.why-list li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;padding:9px 0;border-top:1px solid var(--line-2)}
+  .why li:first-child,ul.why-list li:first-child{border-top:0}
+  .why li .ic,ul.why-list li .ic{font-size:17px;flex:0 0 auto;line-height:1.35;width:20px;text-align:center}
+  .why li b,ul.why-list li b{font-weight:600;display:block}
+  .det{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.45;font-weight:400}
+  .src{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);
+    border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-right:6px;vertical-align:1px}
 
   /* ---------- now/tonight/tomorrow ---------- */
   .periods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
@@ -157,8 +161,10 @@
   .place{display:flex;align-items:center;gap:11px;background:var(--card-2);border:1px solid var(--line-2);
     border-radius:14px;padding:12px 14px;width:100%;text-align:left;color:var(--text)}
   .place .d{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+  .place .pcol{display:flex;flex-direction:column;min-width:0}
   .place .pn{font-weight:600;font-size:15px}
-  .place .ps{margin-left:auto;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+  .place .psub{font-size:11.5px;color:var(--muted);font-weight:400;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+  .place .ps{margin-left:auto;font-size:12px;font-weight:800;letter-spacing:.04em;flex:0 0 auto}
   .place.sel{border-color:var(--ember)}
   .addplace{margin-top:8px;width:100%;border:1px dashed var(--line);background:none;color:var(--muted);
     border-radius:14px;padding:12px;font-size:13.5px}
@@ -262,6 +268,7 @@
     </button>
 
     <div id="alertMount"></div>
+    <div id="stormMount"></div>
 
     <div class="status" id="statusCard">
       <div class="em"></div>
@@ -274,6 +281,11 @@
     <div class="why card" id="whyCard" style="display:none">
       <div class="sec-title" id="whyTitle">Why</div>
       <ul id="whyList"></ul>
+    </div>
+
+    <div class="card" id="changedCard" style="display:none">
+      <div class="sec-title"><span id="changedTitle">What changed</span> <span class="muted" id="changedMeta" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
+      <ul id="changedList" class="why-list"></ul>
     </div>
 
     <div class="periods" id="periods"></div>
@@ -295,6 +307,11 @@
     <div class="card fire" id="fireCard">
       <div class="sec-title">Nearest fire</div>
       <div id="fireBody"></div>
+    </div>
+
+    <div class="card" id="watchCard">
+      <div class="sec-title">Watch next</div>
+      <ul id="watchList" class="why-list"></ul>
     </div>
 
     <div class="card" id="placesCard">
@@ -352,7 +369,8 @@
       <details class="acc"><summary>Nearby Fire Concern</summary><div class="body">
         <p>How much a nearby wildfire could matter to <em>your</em> spot — based on the fire's <strong>size</strong>, <strong>stage of control</strong>, whether it's a “fire of note”, its <strong>distance</strong>, and whether <strong>wind</strong> is carrying conditions toward you. A small, contained fire close by stays Low; a large out-of-control fire raises it even from farther away. It is not a property-safety guarantee.</p></div></details>
       <details class="acc"><summary>Fire-weather &amp; dryness</summary><div class="body">
-        <p>Fires start and spread most easily when fuels are dry — driven by low afternoon humidity, days since rain, heat and wind. BC's official danger classes run Low → Moderate → High → Extreme; when high, campfire and open-burning bans are common — check current bans before burning.</p></div></details>
+        <p>Fires start and spread most easily when fuels are dry — driven by low afternoon humidity, days since rain, heat and wind. BC's official danger classes run Low → Moderate → High → Extreme.</p>
+        <p>Fire-danger ratings describe how easily fires may start and spread. Burning restrictions and campfire prohibitions are issued <strong>separately</strong> by BC Wildfire Service — a High or Extreme rating does <strong>not</strong> automatically mean a ban is in place. Always check current official restrictions before burning: <a href="https://www2.gov.bc.ca/gov/content/safety/wildfire-status/fire-bans-and-restrictions" target="_blank" rel="noopener">BC fire bans &amp; restrictions ↗</a></p></div></details>
       <details class="acc"><summary>Lightning &amp; storms</summary><div class="body">
         <p>Thunderstorm potential uses <strong>CAPE</strong> (instability, J/kg) plus precipitation signals. Dry lightning is a leading cause of new wildfires, and open water is one of the most dangerous places to be in a storm.</p></div></details>
       <details class="acc"><summary>Visibility &amp; smoke</summary><div class="body">
@@ -480,7 +498,11 @@ const Store = {
   places(){ return Store.get(Store.KEY_PLACES, []); },
   savePlaces(list){ Store.set(Store.KEY_PLACES, list); },
   selected(){ return Store.get(Store.KEY_SEL, null); },
-  saveSelected(p){ Store.set(Store.KEY_SEL, p); }
+  saveSelected(p){ Store.set(Store.KEY_SEL, p); },
+  KEY_SNAP: "ew_snap_v1",
+  placeId(p){ return p.lat.toFixed(3)+","+p.lon.toFixed(3); },
+  snap(id){ return (Store.get(Store.KEY_SNAP, {})||{})[id] || null; },
+  saveSnap(id, s){ const all=Store.get(Store.KEY_SNAP, {})||{}; all[id]=s; Store.set(Store.KEY_SNAP, all); }
 };
 
 /* ------------------------------ Data layer ------------------------------ */
@@ -592,7 +614,8 @@ const Engine = {
   /* -- Air interpretation (leads with AQHI, plain language) -- */
   air(aq){
     const out={ ok:!!aq, level:0, label:"—", color:C('--dim'), desc:"", aqhi:null, aqiNow:null,
-      pm25:null, trend:"→", trendLabel:"Stable", timeline:[], goodUntil:null };
+      pm25:null, trend:"→", trendLabel:"Stable", timeline:[], goodUntil:null,
+      hazardous:false, eveningBand:null, eveningWhen:null };
     if(!aq) { out.desc="Air-quality data is unavailable right now."; return out; }
     const cur=aq.current||{};
     out.aqhi = Engine.aqhi(N(cur.ozone), N(cur.nitrogen_dioxide), N(cur.pm2_5));
@@ -608,6 +631,7 @@ const Engine = {
       {label:"Very poor", color:C('--hazard'), desc:"Avoid outdoor exertion and keep windows closed. Everyone can be affected."}
     ][band];
     out.label=map.label; out.color=map.color; out.desc=map.desc;
+    out.hazardous = (out.pm25!=null && out.pm25>=250) || (out.aqiNow!=null && out.aqiNow>=301);
     // trend: compare now vs ~4h ahead (US AQI hourly)
     const h=aq.hourly;
     if(h && h.us_aqi && h.time){
@@ -616,7 +640,7 @@ const Engine = {
       if(iNow>=0){
         const curV=h.us_aqi[iNow], future=h.us_aqi[Math.min(iNow+4,h.us_aqi.length-1)];
         if(curV!=null && future!=null){
-          if(future>=curV+12){ out.trend="↑"; out.trendLabel="Worsening"; }
+          if(future>=curV+12){ out.trend="↑"; out.trendLabel="Getting worse"; }
           else if(future<=curV-12){ out.trend="↓"; out.trendLabel="Improving"; }
           else { out.trend="→"; out.trendLabel="Stable"; }
         }
@@ -632,6 +656,12 @@ const Engine = {
             if(h.us_aqi[i]!=null && h.us_aqi[i]>100){ out.goodUntil=new Date(h.time[i]); break; }
           }
         }
+        // evening/next-9h peak band + when (for Tonight / Watch-next)
+        let pk=-1, pkWhen=null;
+        for(let i=iNow;i<h.time.length;i++){ const t=new Date(h.time[i]).getTime(); if(t>now+9*3600e3)break;
+          const v=h.us_aqi[i]; if(v==null)continue; const band=v<=50?0:v<=100?1:v<=150?2:3;
+          if(band>pk){ pk=band; pkWhen=new Date(h.time[i]); } }
+        if(pk>=0){ out.eveningBand=pk; out.eveningWhen = (pkWhen && pk>out.level)?fmtTimeHour(pkWhen):null; }
       }
     }
     return out;
@@ -645,17 +675,17 @@ const Engine = {
   distanceFactor(km){ if(km<=5)return 1; if(km<=15)return .85; if(km<=30)return .62; if(km<=50)return .45; if(km<=80)return .35; if(km<=120)return .2; if(km<=180)return .08; return 0; },
   fireHazard(f){ let h=Engine.statusWeight(f.status)*.55 + Engine.sizeWeight(f.size)*.55; if(f.ofNote)h+=.15; return Math.min(1.15,h); },
   fireScore(f){ return Engine.fireHazard(f)*Engine.distanceFactor(f.dist); },
-  fireConcernLevel(x){ if(x>=0.55)return 3; if(x>=0.38)return 2; if(x>=0.2)return 1; return 0; }, // Low/Elevated/High/Critical
+  fireConcernLevel(x){ if(x>=0.72)return 3; if(x>=0.5)return 2; if(x>=0.28)return 1; return 0; }, // Low/Elevated/High/Critical
 
   windCarryingToward(worst, wx){
-    // returns {toward:bool, text, timing} using wind_direction (dir wind COMES FROM)
-    if(!worst || !wx) return {toward:false};
+    // returns {toward, away, text} using wind_direction (direction wind COMES FROM)
+    if(!worst || !wx) return {toward:false, away:false};
     const wd = wx.current ? N(wx.current.wind_direction_10m) : null;
-    if(wd==null || worst.bearing==null) return {toward:false};
+    if(wd==null || worst.bearing==null) return {toward:false, away:false};
     const diff=Geo.angDiff(worst.bearing, wd);
-    if(diff<=55) return {toward:true, text:`Winds are carrying smoke/conditions toward your area from the ${Geo.compass(worst.bearing)}`};
-    if(diff>=125) return {toward:false, text:`Current winds are mostly carrying smoke away from your location`};
-    return {toward:false, text:`Winds are variable relative to the fire`};
+    if(diff<=55) return {toward:true, away:false, text:`Winds are broadly carrying smoke toward your area from the ${Geo.compass(worst.bearing)}`};
+    if(diff>=125) return {toward:false, away:true, text:`Current winds are mostly carrying smoke away from your location`};
+    return {toward:false, away:false, text:`Winds are variable relative to the fire`};
   },
 
   fire(fires, wx){
@@ -669,8 +699,9 @@ const Engine = {
     out.worst=worst;
     const drift=Engine.windCarryingToward(worst, wx); out.drift=drift;
     let lvl=Engine.fireConcernLevel(ws);
-    if(drift.toward && lvl<3 && ws>=0.12) lvl+=1;              // wind toward → bump
-    lvl=Math.min(3,lvl);
+    if(drift.toward && lvl<3 && ws>=0.12) lvl+=1;              // wind carrying smoke toward you → bump
+    else if(drift.away && lvl>0 && worst.dist>20) lvl-=1;      // clearly carrying away & not close → temper
+    lvl=Math.min(3,Math.max(0,lvl));
     out.level=lvl;
     out.label=["Low","Elevated","High","Critical"][lvl];
     out.color=[C('--clear'),C('--watch'),C('--concern'),C('--act')][lvl];
@@ -730,137 +761,179 @@ const Engine = {
     return out;
   },
 
-  /* -- Master EmberWatch status -- */
+  /* -- Master EmberWatch status (deterministic; see STATUS LOGIC notes) --
+     Each factor contributes a state level (0 CLEAR,1 WATCH,2 CONCERN,3 ACT NOW).
+     Final state = highest contribution, with ONE escalation rule (3+ WATCH factors → CONCERN).
+     Official evacuation always takes precedence. ACT NOW is used very conservatively. */
   status(ctx){
     const {air, fire, storm, heat, evac} = ctx;
-    const reasons=[];
-    let state=0; // 0 CLEAR,1 WATCH,2 CONCERN,3 ACT NOW
-    let official=null;
+    let state=0, official=null;
+    const F=[]; const add=(lvl,w,ic,title,detail)=>F.push({lvl,w,ic,title,detail});
+    const fh = d => d ? fmtTimeHour(d) : null;
 
-    // Official override
-    const order = (evac.atLocation||[]).find(a=>/order|tactical/i.test(a.status));
+    // 1) Official evacuation (precedence)
+    const order   = (evac.atLocation||[]).find(a=>/order|tactical/i.test(a.status));
     const alertAt = (evac.atLocation||[]).find(a=>/alert/i.test(a.status));
-    const nearbyOfficial = evac.highest && !evac.atLocation.length ? evac.highest : null;
-    if(order){ state=3; official=order;
-      reasons.push({ic:"🚨", t:`Official evacuation ${order.status.toLowerCase()} where you are — ${esc(order.agency||order.name)}`}); }
-    else if(alertAt){ state=3; official=alertAt;
-      reasons.push({ic:"🚨", t:`Official evacuation alert where you are — ${esc(alertAt.agency||alertAt.name)}`}); }
+    const nearby  = (!(evac.atLocation||[]).length && evac.highest) ? evac.highest : null;
+    if(order){ state=3; official=order; add(3,100,"🚨",`Evacuation ${order.status.toLowerCase()} where you are`, `Issued by ${esc(order.agency||order.name)}. Follow official instructions now.`); }
+    else if(alertAt){ state=3; official=alertAt; add(3,99,"🚨","Evacuation alert where you are", `Issued by ${esc(alertAt.agency||alertAt.name)}. Be ready to leave on short notice.`); }
+    else if(nearby){ state=Math.max(state,2); official=nearby; add(2,95,"🚨",`Evacuation ${nearby.status.toLowerCase()} ~${rnd(nearby.dist)} km away`, `Issued by ${esc(nearby.agency||nearby.name)}. Not at your location, but close by.`); }
 
-    // Fire
-    if(fire.ok && fire.worst){
-      if(fire.level>=1){
-        const dir=fire.worst.bearing!=null?Geo.compass(fire.worst.bearing):"";
-        reasons.push({ic:"🔥", t:`${fire.worst.status||"Active"} fire ${rnd(fire.worst.dist)} km ${dir}${fire.worst.size!=null?` (${fmtNum(fire.worst.size)} ha)`:""}`});
-      }
-      if(fire.level>=2) state=Math.max(state,2);
-      else if(fire.level===1) state=Math.max(state,1);
-      if(fire.drift && fire.drift.toward) reasons.push({ic:"💨", t:"Winds may carry smoke/conditions toward your area"});
-    }
-    // Air
+    // 2) Air quality (moderate→WATCH, poor/very poor→CONCERN, hazardous→ACT NOW)
     if(air.ok){
-      if(air.level>=3){ state=Math.max(state,3); reasons.push({ic:"😷", t:`Air quality is very poor${air.aqhi!=null?` — AQHI ${air.aqhi}`:""}`}); }
-      else if(air.level===2){ state=Math.max(state,2); reasons.push({ic:"😷", t:`Air quality is poor${air.aqhi!=null?` — AQHI ${air.aqhi}`:""}`}); }
-      else if(air.level===1){ state=Math.max(state,1); reasons.push({ic:"🌫", t:`Air quality is moderate${air.trend==="↑"?" and worsening":""}`}); }
-      else if(air.trend==="↑"){ state=Math.max(state,1); reasons.push({ic:"🌫", t:"Smoke expected to increase later"}); }
+      if(air.hazardous){ state=Math.max(state,3); add(3,90,"😷","Hazardous air quality","Smoke is at dangerous levels — stay indoors with windows closed."); }
+      else if(air.level>=2){ state=Math.max(state,2); add(2,70,"😷",`Air quality is ${air.label.toLowerCase()}${air.aqhi!=null?` (AQHI ${air.aqhi})`:""}`, air.trend==="↑"?"Still worsening — limit time outdoors, especially if smoke-sensitive.":"Limit strenuous activity outdoors, especially if smoke-sensitive."); }
+      else if(air.level===1){ state=Math.max(state,1); add(1,45,"🌫","Air quality is moderate", air.trend==="↑"?"Expected to worsen later — plan outdoor time earlier if you're smoke-sensitive.":"Fine for most people; smoke-sensitive people may notice it."); }
+      else if(air.trend==="↑" && air.eveningBand>=1){ state=Math.max(state,1); add(1,40,"🌫","Smoke expected to increase later", air.eveningWhen?`Air may worsen around ${air.eveningWhen}.`:"Air may worsen this evening."); }
     }
-    // Storm
-    if(storm.risk>=2){ state=Math.max(state,2); reasons.push({ic:"⛈", t:`Thunderstorms possible${storm.firstHour?` from ~${storm.firstHour.toLocaleTimeString('en-CA',{hour:'numeric',timeZone:CONFIG.TZ}).replace(':00','')}`:""}`}); }
-    else if(storm.risk===1){ state=Math.max(state,1); reasons.push({ic:"⛈", t:"Slight thunderstorm chance"}); }
-    // Heat
-    if(heat.level>=3){ state=Math.max(state,2); reasons.push({ic:"🌡", t:`Extreme heat — feels like ${rnd(heat.feels)}°`}); }
-    else if(heat.level===2){ state=Math.max(state,1); reasons.push({ic:"🌡", t:`Heat building — feels like ${rnd(heat.feels)}°`}); }
 
-    // Nearby (not at-location) official → at least CONCERN + note
-    if(nearbyOfficial){ state=Math.max(state,2);
-      reasons.unshift({ic:"🚨", t:`Official evacuation ${nearbyOfficial.status.toLowerCase()} ~${rnd(nearbyOfficial.dist)} km away — ${esc(nearbyOfficial.agency||nearbyOfficial.name)}`}); }
+    // 3) Nearby Fire Concern (Elevated→WATCH, High/Critical→CONCERN)
+    if(fire.ok && fire.worst){
+      const w=fire.worst, dir=w.bearing!=null?Geo.compass(w.bearing):"", drift=fire.drift||{};
+      const detail = drift.toward ? "Winds are broadly carrying smoke toward you — conditions here could deteriorate."
+        : (drift.text? drift.text+"." : "Distance and current winds keep the direct risk lower for now.");
+      if(fire.level>=2){ state=Math.max(state,2); add(2,68,"🔥",`${esc(w.status||"Active")} fire ${rnd(w.dist)} km ${dir}${w.size!=null?` (${fmtNum(w.size)} ha)`:""}`, detail); }
+      else if(fire.level===1){ state=Math.max(state,1); add(1,50,"🔥",`${esc(w.status||"Active")} fire ${rnd(w.dist)} km ${dir}`, detail); }
+    }
+
+    // 4) Storms / lightning (moderate→WATCH, severe→CONCERN)
+    if(storm.risk>=3){ state=Math.max(state,2); add(2,72,"⛈","Severe thunderstorm threat", storm.firstHour?`Storms may develop around ${fh(storm.firstHour)} — dangerous near open water.`:"Storms may develop — dangerous near open water."); }
+    else if(storm.risk===2){ state=Math.max(state,1); add(1,55,"⛈","Thunderstorms possible", storm.firstHour?`Possible from around ${fh(storm.firstHour)}. Lightning can start new fires.`:"Lightning can start new fires."); }
+    else if(storm.risk===1){ state=Math.max(state,1); add(1,35,"⛈","Slight thunderstorm chance","Worth a look at the sky later, especially on the water."); }
+
+    // 5) Heat (level2→WATCH, extreme→CONCERN)
+    if(heat.level>=3){ state=Math.max(state,2); add(2,60,"🌡","Extreme heat", `Feels like about ${rnd(heat.feels)}° — hydrate, seek shade/AC and check on others.`); }
+    else if(heat.level===2){ state=Math.max(state,1); add(1,42,"🌡","Heat building", `Feels like about ${rnd(heat.feels)}° this afternoon — take breaks and hydrate.`); }
+
+    // 6) Escalation: several WATCH-level factors at once → CONCERN
+    if(state===1 && F.filter(f=>f.lvl>=1).length>=3){ state=2; add(2,30,"🧩","Several conditions changing at once","Each is minor alone, but together they're worth closer attention today."); }
 
     const meta=[
-      {key:"CLEAR", color:C('--clear'), sentence:"No significant fire, smoke or severe-weather concerns near you right now."},
-      {key:"WATCH", color:C('--watch'), sentence:"No immediate danger, but conditions are changing. Keep an eye on things today."},
-      {key:"CONCERN", color:C('--concern'), sentence:"Something nearby could affect your area today. Stay aware and be ready to act."},
-      {key:"ACT NOW", color:C('--act'), sentence:"An official evacuation notice or immediate hazard affects your area. Follow official instructions now."}
+      {key:"CLEAR",   color:C('--clear')},
+      {key:"WATCH",   color:C('--watch')},
+      {key:"CONCERN", color:C('--concern')},
+      {key:"ACT NOW", color:C('--act')}
     ][state];
 
-    // sharpen sentence with the top driver for WATCH/CONCERN
-    let sentence=meta.sentence;
-    if((state===1||state===2) && reasons[0]){
-      const lead=reasons[0].t.replace(/^[^ ]+ /,''); // strip leading emoji word not needed; keep text
+    const reasons = F.filter(f=>f.lvl>=1).sort((a,b)=> b.lvl-a.lvl || b.w-a.w).slice(0,3)
+      .map(f=>({ic:f.ic, title:f.title, detail:f.detail}));
+
+    const positives=[];
+    if(state===0){
+      positives.push({ic:"✓", t:"No significant wildfire threat nearby"});
+      positives.push({ic:"✓", t: air.ok?`Air quality is ${(air.label||"good").toLowerCase()}`:"Air quality looks fine"});
+      positives.push({ic:"✓", t:"No severe weather expected"});
+      positives.push({ic:"✓", t: evac.ok?"No evacuation alerts near this location":"No evacuation alerts detected"});
     }
-    return { state, key:meta.key, color:meta.color, sentence, reasons:reasons.slice(0,4), official };
+
+    let sentence;
+    if(state===0) sentence="No significant fire, smoke or severe-weather concerns near you right now.";
+    else if(state===3 && official) sentence="An official evacuation notice affects your area. Follow official instructions now.";
+    else if(state===3) sentence="Hazardous conditions affect your area right now — limit all outdoor exposure.";
+    else if(state===2) sentence = reasons[0]?`${reasons[0].title}. Stay aware and be ready to act.`:"Something nearby could affect your area today.";
+    else sentence = reasons[0]?`${reasons[0].title}. Worth keeping an eye on, but no immediate danger.`:"Conditions are changing — keep an eye on things today.";
+
+    return { state, key:meta.key, color:meta.color, sentence, reasons, positives, official };
   },
 
-  /* -- NOW / TONIGHT / TOMORROW -- */
+  /* -- NOW / TONIGHT / TOMORROW — each highlights what's most important / different -- */
   periods(ctx){
-    const {air, storm, wx, fireLvl} = ctx;
-    const lvlColor=l=>[C('--clear'),C('--watch'),C('--concern'),C('--act')][Math.min(3,l)];
-    const lvlWord=l=>["Good","Watch","Concern","Alert"][Math.min(3,l)];
-    // NOW
-    let nowL = Math.max(air.level||0, fireLvl>=2?fireLvl-1:0);
-    let nowText = nowL===0 ? "Good conditions and no significant threat moving toward you."
-      : air.level>=1 ? `Air quality is ${air.label.toLowerCase()}${fireLvl>=2?", and a nearby fire is worth watching":""}.`
-      : "A nearby fire is worth keeping an eye on.";
-    const now={ level:nowL, word:lvlWord(nowL), color:lvlColor(nowL), text:nowText, conf:"High" };
+    const {air, storm, wx, fire} = ctx;
+    const col=l=>[C('--clear'),C('--watch'),C('--concern'),C('--act')][Math.min(3,l)];
+    const word=l=>["Good","Watch","Concern","Alert"][Math.min(3,l)];
+    const fh=d=>d?fmtTimeHour(d):null;
 
-    // TONIGHT — evening/overnight AQI + storms
-    let tL=0, tText="Conditions steady overnight.", tConf="High";
-    if(air.ok && wx && wx.hourly && wx.hourly.us_aqi){
-      // handled via air.timeline peak this evening
-    }
-    // use air timeline: max AQI category in next ~8h
-    let evePeak=null; if(ctxHourlyAqi(ctx)){ evePeak=ctxHourlyAqi(ctx); }
-    if(evePeak){
-      const catNow=air.aiqCatBandNow!=null?air.aiqCatBandNow:air.level;
-      if(evePeak.band>air.level){ tL=evePeak.band; tText=`Smoke/air may worsen${evePeak.when?` after ~${evePeak.when}`:" this evening"}.`; tConf="Moderate"; }
-      else { tL=air.level; tText = air.level>=1?"Air stays elevated overnight.":"Air stays good overnight."; }
-    }
-    if(storm.risk>=2 && storm.firstHour){ tL=Math.max(tL,2); tText=`Thunderstorms possible tonight (~${storm.firstHour.toLocaleTimeString('en-CA',{hour:'numeric',timeZone:CONFIG.TZ}).replace(':00','')}).`; tConf="Moderate"; }
-    const tonight={ level:tL, word:lvlWord(tL), color:lvlColor(tL), text:tText, conf:tConf };
+    // NOW — dominant current condition
+    let nL=0, nT="Air is good and no significant threat is moving toward you.";
+    if(air.hazardous){ nL=3; nT="Air is hazardous right now — stay indoors."; }
+    else if(air.level>=2){ nL=2; nT=`Air quality is ${air.label.toLowerCase()} right now.`; }
+    else if(fire.level>=2){ nL=2; nT=`A significant fire is nearby; ${fire.drift&&fire.drift.toward?"smoke may be reaching you":"smoke is mostly staying away for now"}.`; }
+    else if(air.level===1){ nL=1; nT="Air quality is moderate but okay for most people."; }
+    else if(fire.level===1){ nL=1; nT="A nearby fire is worth keeping an eye on."; }
+    const now={ level:nL, word:word(nL), color:col(nL), text:nT, conf:"High" };
 
-    // TOMORROW — fire-weather + max AQI + storm
-    let mL=0, mText="Similar conditions expected.", mConf="Moderate";
-    if(wx && wx.daily){
-      const d=wx.daily, i=dayIndex(d)+1;
+    // TONIGHT — what changes this evening/overnight (smoke rise, storms, or easing)
+    let tL=air.level||0, tT="Much like now overnight.", tC="High", changed=false;
+    if(air.eveningBand!=null && air.eveningBand>air.level){ tL=air.eveningBand; tT=`Smoke likely to increase${air.eveningWhen?` after ~${air.eveningWhen}`:" this evening"}.`; tC="Moderate"; changed=true; }
+    else if(air.trend==="↓" && air.level>=1){ tL=Math.max(0,air.level-1); tT="Air should ease off through the evening."; tC="Moderate"; changed=true; }
+    if(storm.risk>=2 && storm.firstHour){ tL=Math.max(tL, storm.risk>=3?2:1); tT=`Thunderstorms possible tonight${storm.firstHour?` (~${fh(storm.firstHour)})`:""}.`; tC="Moderate"; changed=true; }
+    if(!changed) tT = air.level>=1 ? "Air stays a little elevated overnight." : "Quiet overnight — no big changes expected.";
+    const tonight={ level:tL, word:word(tL), color:col(tL), text:tT, conf:tC };
+
+    // TOMORROW — fire weather / rain / storms
+    let mL=0, mT="Similar conditions expected.", mC="Moderate";
+    if(wx && wx.daily){ const d=wx.daily, i=dayIndex(d)+1;
       if(i<(d.time?d.time.length:0)){
         const rh=dailyMinRH(wx)[d.time[i]], gust=N(d.wind_gusts_10m_max&&d.wind_gusts_10m_max[i])||0,
           tmax=N(d.temperature_2m_max&&d.temperature_2m_max[i]), rain=N(d.precipitation_sum&&d.precipitation_sum[i])||0,
-          spell=drySpellArray(d)[i]||0;
-        const fw=fireWxRisk(tmax, rh, gust, rain, spell);
-        if(fw>=3){ mL=2; mText="Hotter, drier and windier — rising fire-weather risk."; }
-        else if(fw>=2){ mL=1; mText="Warm and dry — elevated fire weather."; }
-        else if(rain>=5){ mL=0; mText="Cooler and wetter — easing fire weather."; }
-        else { mL=0; mText="Moderate fire weather expected."; }
-        if(d.weather_code && d.weather_code[i]>=95){ mL=Math.max(mL,2); mText="Thunderstorms in the forecast — lightning can start new fires."; }
+          spell=drySpellArray(d)[i]||0, fw=fireWxRisk(tmax, rh, gust, rain, spell);
+        if(d.weather_code && d.weather_code[i]>=95){ mL=2; mT="Thunderstorms in the forecast — lightning can spark new fires."; }
+        else if(fw>=3){ mL=2; mT="Hotter, drier and windier — rising fire-weather risk."; }
+        else if(fw>=2){ mL=1; mT="Warm and dry — elevated fire weather."; }
+        else if(rain>=5){ mL=0; mT="Cooler and wetter — easing fire weather."; }
+        else { mL=0; mT="Comfortable, moderate fire weather."; }
       }
     }
-    const tomorrow={ level:mL, word:lvlWord(mL), color:lvlColor(mL), text:mText, conf:mConf };
+    const tomorrow={ level:mL, word:word(mL), color:col(mL), text:mT, conf:mC };
     return { now, tonight, tomorrow };
   },
 
-  /* -- Can I go outside? -- */
+  /* -- Boating / lake intelligence (used by activities + Home storm banner) -- */
+  boating(ctx){
+    const {storm, wx, air} = ctx;
+    const di = wx&&wx.daily?dayIndex(wx.daily):0;
+    const gustMax = wx&&wx.daily?N(wx.daily.wind_gusts_10m_max&&wx.daily.wind_gusts_10m_max[di]):null;
+    const stormAt = storm.firstHour?fmtTimeHour(storm.firstHour):null;
+    const windAt = Engine.windPickupTime(wx); const windWhen = windAt?fmtTimeHour(windAt):null;
+    if(storm.risk>=2) return { score:3, warn:true, short:"Get off the water", headline:"⚡ Get off the water",
+      detail:`Thunderstorm conditions may develop${stormAt?` around ${stormAt}`:" this afternoon"}. Avoid open water when lightning is nearby.` };
+    if(storm.risk===1) return { score:2, warn:false, short:"Watch the sky", headline:"Storm chance later",
+      detail:"A slight thunderstorm chance later — keep an eye on the sky if you're on the water." };
+    if(gustMax!=null && gustMax>=40) return { score: gustMax>=50?3:2, warn:false, short: windWhen?`Best before ${windWhen}`:"Windy",
+      headline:"Windy on the water", detail:`Winds/gusts up to ~${rnd(gustMax)} km/h${windWhen?` — calmer before ${windWhen}`:""}.` };
+    if(gustMax!=null && gustMax>=28) return { score:1, warn:false, short: windWhen?`Best before ${windWhen}`:"Light chop",
+      headline:"Light chop later", detail:`Breezy at times${windWhen?`, picking up around ${windWhen}`:""}.` };
+    if(air.level>=2) return { score:2, warn:false, short:"Smoke — limit", headline:"Smoky on the water", detail:"Air quality is poor — limit prolonged time outdoors." };
+    return { score:0, warn:false, short:"Good", headline:"Good on the water", detail:"Light winds and no storms expected — good boating conditions." };
+  },
+
+  /* -- Can I go outside? — activity windows with timing -- */
   activities(ctx){
     const {air, heat, storm, wx} = ctx;
-    const aqi=air.level, feels=heat.feels, gust=wx&&wx.daily?N(wx.daily.wind_gusts_10m_max&&wx.daily.wind_gusts_10m_max[dayIndex(wx.daily)]):null;
-    const uv = wx&&wx.daily?N(wx.daily.uv_index_max&&wx.daily.uv_index_max[dayIndex(wx.daily)]):null;
-    const V=["✅","✅","⚠️","🚫"]; // by score 0..3
-    const air2=(sens)=> aqi>=3?3 : aqi===2?(sens?3:2) : aqi===1?(sens?2:1) : 0;
-    const heatS=(k)=> feels==null?0 : feels>=37?(k?3:2) : feels>=33?(k?2:2) : feels>=29?1:0;
-    const stormS=(water)=> storm.risk===0?0 : water?(storm.risk>=2?3:2):(storm.risk>=3?2:1);
-    const windS=()=> gust==null?0 : gust>=45?3 : gust>=30?2 : 0;
-    const mk=(name,ic,score)=>({ name, ic, score, v:V[Math.min(3,score)] });
-    const items=[
-      mk("Kids","🧒", Math.max(air2(true), heatS(true), stormS(false), uv>=8?1:0)),
-      mk("Exercise","🏃", Math.max(air2(false), heatS(false), stormS(false))),
-      mk("Walking","🚶", Math.max(air2(false), heatS(false)===3?2:heatS(false), stormS(false)===0?0:1)),
-      mk("Boating","🚤", Math.max(stormS(true), windS(), air2(false))),
-      mk("Smoke-sensitive","😷", air2(true))
-    ];
-    // "good until"
-    let until=null; if(air.goodUntil) until=air.goodUntil;
-    let note = air.trend==="↑" ? "Smoke is expected to increase later — plan outdoor time earlier."
+    const feels=heat.feels, di=wx&&wx.daily?dayIndex(wx.daily):0;
+    const aqi=air.level;
+    const air2=s=> aqi>=3?3 : aqi===2?(s?3:2) : aqi===1?(s?2:1):0;
+    const heatS=k=> feels==null?0 : feels>=37?3 : feels>=33?(k?3:2) : feels>=29?1:0;
+    const smokeUntil = (air.trend==="↑" && air.goodUntil) ? fmtTimeHour(air.goodUntil) : null;
+    const stormAt = storm.firstHour?fmtTimeHour(storm.firstHour):null;
+    const phrase=(score,opts)=>{ opts=opts||{};
+      if(score>=3) return opts.avoid||"Not advised";
+      if(score===2) return opts.caution||"Use caution";
+      if(opts.until) return `Good until ~${opts.until}`;
+      return opts.good||"Good"; };
+    const items=[];
+    { const s=Math.max(air2(true),heatS(true),storm.risk>=2?2:0);
+      items.push({name:"Kids", ic:"🧒", score:s, phrase:phrase(s,{until:smokeUntil, caution:smokeUntil?`Limit after ${smokeUntil}`:"Limit outdoor play", avoid:"Keep indoors"})}); }
+    { const s=Math.max(air2(false),heatS(false),storm.risk>=2?2:0);
+      items.push({name:"Exercise", ic:"🏃", score:s, phrase:phrase(s,{until:smokeUntil, caution:"Ease back", avoid:"Not advised"})}); }
+    { const base=Math.max(air2(false),heatS(false)); const s=Math.max(base, storm.risk>=2?2:0);
+      const p = s>=3?"Not advised" : storm.risk>=2&&stormAt?`Best before ${stormAt}` : smokeUntil?`Best before ~${smokeUntil}` : s===2?"Best earlier":"Good";
+      items.push({name:"Hiking", ic:"🥾", score:s, phrase:p}); }
+    { const bo=Engine.boating(ctx); items.push({name:"Boating", ic:"🚤", score:bo.score, phrase:bo.short}); }
+    { const s=air2(true); items.push({name:"Smoke-sensitive", ic:"😷", score:s,
+      phrase: s>=3?"Stay indoors" : s===2?(smokeUntil?`Limit after ${smokeUntil}`:"Limit outdoors") : smokeUntil?`OK until ~${smokeUntil}`:"OK"}); }
+
+    // best outdoor window
+    let bestWindow=null;
+    if(air.trend==="↑" && air.goodUntil) bestWindow={ text:`Now – ~${fmtTimeHour(air.goodUntil)}`, sub:"Conditions should stay good until smoke increases this evening." };
+    else if(storm.risk>=2 && storm.firstHour) bestWindow={ text:`Now – ~${fmtTimeHour(storm.firstHour)}`, sub:"Good until thunderstorms may develop this afternoon." };
+    else if(aqi===0 && storm.risk===0 && heat.level<2) bestWindow={ text:"All day looks good", sub:"No significant smoke, storms or heat expected today." };
+
+    const note = air.trend==="↑" ? "Smoke is expected to increase later — plan outdoor time earlier."
       : storm.risk>=2 ? "Thunderstorms possible later — watch the sky, especially on the water."
       : heat.level>=2 ? "It's hot — hydrate, take breaks and use shade."
       : "Conditions look good for time outside.";
-    return { items, until, note };
+    return { items, bestWindow, note };
   }
 };
 
@@ -885,14 +958,103 @@ function ctxHourlyAqi(ctx){ // evening peak AQI band + when
   return peak<0?null:{band:peak, when};
 }
 
+/* ---- 2.1 intelligence: snapshots, What Changed, Watch Next, fire/wind ---- */
+Engine.windPickupTime=function(wx){
+  if(!wx||!wx.hourly||!wx.hourly.wind_gusts_10m||!wx.hourly.time) return null;
+  const now=Date.now(); let curG=null;
+  for(let i=0;i<wx.hourly.time.length;i++){ if(new Date(wx.hourly.time[i]).getTime()>=now-30*60000){ curG=wx.hourly.wind_gusts_10m[i]; break; } }
+  for(let i=0;i<wx.hourly.time.length;i++){ const t=new Date(wx.hourly.time[i]); const tm=t.getTime();
+    if(tm<now||tm>now+12*3600e3) continue;
+    const hr=+t.toLocaleString('en-CA',{hour:'2-digit',hour12:false,timeZone:CONFIG.TZ}).slice(0,2);
+    const g=wx.hourly.wind_gusts_10m[i];
+    if(g!=null && g>=28 && (curG==null||g>=curG+8) && hr>=10 && hr<=20) return t;
+  }
+  return null;
+};
+Engine.fireWind=function(worst, wx){
+  if(!worst || !wx || !wx.current) return null;
+  const cur = Engine.windCarryingToward(worst, wx);
+  let later=null;
+  if(wx.hourly && wx.hourly.wind_direction_10m && wx.hourly.time && worst.bearing!=null){
+    const now=Date.now(); let eveDir=null, eveWhen=null;
+    for(let i=0;i<wx.hourly.time.length;i++){ const t=new Date(wx.hourly.time[i]); const tm=t.getTime();
+      if(tm<now||tm>now+12*3600e3) continue;
+      const hr=+t.toLocaleString('en-CA',{hour:'2-digit',hour12:false,timeZone:CONFIG.TZ}).slice(0,2);
+      if(hr>=16 && hr<=22 && wx.hourly.wind_direction_10m[i]!=null){ eveDir=wx.hourly.wind_direction_10m[i]; eveWhen=t; break; } }
+    if(eveDir!=null){ const towardLater = Geo.angDiff(worst.bearing, eveDir)<=55;
+      if(towardLater && !cur.toward) later=`Winds may turn ${Geo.compass(eveDir)} around ${fmtTimeHour(eveWhen)}, which could push smoke toward your area this evening.`;
+      else if(!towardLater && cur.toward) later=`Winds are expected to ease away from your area later this evening.`;
+    }
+  }
+  return { current: cur.text || (cur.toward?"Winds are broadly carrying smoke toward you":"Winds are mostly carrying smoke away from you"), later, toward:cur.toward };
+};
+Engine._rainSoon=function(wx){
+  if(!wx||!wx.hourly||!wx.hourly.precipitation||!wx.hourly.time) return false;
+  const now=Date.now(); let s=0;
+  for(let i=0;i<wx.hourly.time.length;i++){ const t=new Date(wx.hourly.time[i]).getTime(); if(t<now||t>now+12*3600e3)continue; s+=wx.hourly.precipitation[i]||0; }
+  return s>=2;
+};
+Engine.snapshot=function(b){
+  const f = b.fire&&b.fire.worst ? b.fire.worst : null;
+  return { at:Date.now(),
+    status:b.status.key, statusLevel:b.status.state,
+    fireName:f?f.name:null, fireDist:f&&f.dist!=null?Math.round(f.dist):null, fireSize:f&&f.size!=null?Math.round(f.size):null,
+    fireStatus:f?f.status:null, fireOfNote:f?!!f.ofNote:false, fireConcern:b.fire?b.fire.level:0,
+    aqhi:b.air?b.air.aqhi:null, pm25:b.air&&b.air.pm25!=null?Math.round(b.air.pm25):null, aqiBand:b.air?b.air.level:null, smokeTrend:b.air?b.air.trend:null,
+    windDir:b.wx&&b.wx.current?N(b.wx.current.wind_direction_10m):null, windSpd:b.wx&&b.wx.current?N(b.wx.current.wind_speed_10m):null,
+    stormRisk:b.storm?b.storm.risk:0, evacKey:b.evac&&b.evac.highest?b.evac.highest.status:null, rainSoon:Engine._rainSoon(b.wx) };
+};
+Engine.aqhiBandName=function(a){ return a==null?null : a<=3?"Low":a<=6?"Moderate":a<=10?"High":"Very high"; };
+Engine.whatChanged=function(prev, cur){
+  if(!prev || !cur) return [];
+  const out=[], concernLbl=["Low","Elevated","High","Critical"];
+  if(prev.status!==cur.status) out.push({ic:"⚠️", worse:cur.statusLevel>prev.statusLevel, t:`EmberWatch status changed ${prev.status} → ${cur.status}`});
+  if(cur.evacKey && cur.evacKey!==prev.evacKey && !/all clear/i.test(cur.evacKey)) out.push({ic:"📢", worse:true, t:`New official evacuation ${cur.evacKey.toLowerCase()} near this location`});
+  else if(prev.evacKey && !cur.evacKey) out.push({ic:"✓", worse:false, t:`Evacuation ${prev.evacKey.toLowerCase()} no longer nearby`});
+  if(cur.fireConcern!==prev.fireConcern) out.push({ic: cur.fireConcern>prev.fireConcern?"🔥":"✓", worse:cur.fireConcern>prev.fireConcern, t:`Nearby fire concern ${cur.fireConcern>prev.fireConcern?"increased":"decreased"} (${concernLbl[prev.fireConcern]} → ${concernLbl[cur.fireConcern]})`});
+  if(cur.fireName && cur.fireName===prev.fireName && cur.fireSize!=null && prev.fireSize!=null){ const d=cur.fireSize-prev.fireSize;
+    if(d>=100 || (prev.fireSize>0 && d/prev.fireSize>=0.25 && d>=25)) out.push({ic:"🔥", worse:true, t:`${cur.fireName} grew by ${fmtNum(d)} ha`}); }
+  if(cur.fireName && cur.fireName===prev.fireName && cur.fireStatus && prev.fireStatus && cur.fireStatus!==prev.fireStatus)
+    out.push({ic:"🔥", worse:/out of control/i.test(cur.fireStatus), t:`${cur.fireName} is now ${cur.fireStatus}`});
+  if(cur.fireName && cur.fireName!==prev.fireName && cur.fireConcern>=1 && (prev.fireDist==null||cur.fireDist==null||cur.fireDist<prev.fireDist))
+    out.push({ic:"🔥", worse:true, t:`New nearby fire: ${cur.fireName}${cur.fireDist!=null?` (${cur.fireDist} km)`:""}`});
+  if(cur.aqhi!=null && prev.aqhi!=null){ const d=cur.aqhi-prev.aqhi, bc=Engine.aqhiBandName(cur.aqhi)!==Engine.aqhiBandName(prev.aqhi);
+    if(Math.abs(d)>=2 || bc) out.push({ic:d>0?"🌫":"✓", worse:d>0, t:`AQHI ${d>0?"increased":"decreased"} ${prev.aqhi} → ${cur.aqhi}${bc?` (${Engine.aqhiBandName(cur.aqhi)} risk)`:""}`}); }
+  else if(cur.pm25!=null && prev.pm25!=null){ const d=cur.pm25-prev.pm25;
+    if(Math.abs(d)>=10 && prev.pm25>0 && Math.abs(d)/Math.max(prev.pm25,10)>=0.4) out.push({ic:d>0?"🌫":"✓", worse:d>0, t:`PM2.5 ${d>0?"rose":"fell"} ${prev.pm25} → ${cur.pm25} µg/m³`}); }
+  if(cur.windDir!=null && prev.windDir!=null && (cur.fireConcern>=1||prev.fireConcern>=1) && Geo.angDiff(cur.windDir,prev.windDir)>=60)
+    out.push({ic:"💨", worse:false, t:`Winds shifted ${Geo.compass(cur.windDir)}`});
+  if(cur.stormRisk>=2 && prev.stormRisk<2) out.push({ic:"⛈", worse:true, t:"Thunderstorm risk developing"});
+  else if(prev.stormRisk>=2 && cur.stormRisk<2) out.push({ic:"✓", worse:false, t:"Thunderstorm risk has eased"});
+  if(cur.rainSoon && !prev.rainSoon) out.push({ic:"🌧", worse:false, t:"Rain is now expected in the next several hours"});
+  return out;
+};
+Engine.changeLabel=function(gapMs){
+  if(gapMs==null) return null; const h=gapMs/3600000;
+  if(h<3) return "In the last few hours"; if(h<24) return "Since earlier today"; if(h<48) return "Since yesterday"; return "Since your last visit";
+};
+Engine.watchNext=function(ctx){
+  const {air, storm, wx, fire}=ctx; const out=[];
+  const fwl = fire&&fire.worst ? Engine.fireWind(fire.worst, wx) : null;
+  if(fwl && fwl.later) out.push({ic:"💨", t:fwl.later.replace(/\.$/,'')});
+  else { const wp=Engine.windPickupTime(wx); if(wp) out.push({ic:"💨", t:`Winds pick up around ${fmtTimeHour(wp)}`}); }
+  if(air.eveningBand!=null && air.eveningBand>air.level) out.push({ic:"🌫", t:`Air may reach ${["good","moderate","poor","very poor"][air.eveningBand]}${air.eveningWhen?` around ${air.eveningWhen}`:" tonight"}`});
+  if(storm.firstHour) out.push({ic:"⛈", t:`Thunderstorm potential around ${fmtTimeHour(storm.firstHour)}`});
+  if(fire.ok && fire.worst && fire.level>=2) out.push({ic:"🔥", t:"Check the nearby fire update again this evening"});
+  return out.slice(0,4);
+};
+
 /* ------------------------------ App / UI -------------------------------- */
 const App = {
   place: null, bundle:null, map:null, mapLayers:{}, mapInited:false,
 
+  visitBaseline:null,
+  beginVisit(){ App.visitBaseline = Store.snap(Store.placeId(App.place)); },
   async init(){
     App.place = Store.selected() || CONFIG.defaultPlace;
     UI.wireNav(); UI.wireSheet(); UI.wireMap(); UI.renderNotificationsList();
     UI.setLoc(App.place.name);
+    App.beginVisit();
     App.load();
     setInterval(UI.refreshFreshness, 30000);
     // service worker
@@ -913,26 +1075,39 @@ const App = {
     const heat=Engine.heat(wx);
     const evac=Engine.evac(evacF, lat, lon);
     const status=Engine.status({air, fire, storm, heat, evac});
-    const periods=Engine.periods({air, storm, wx, fireLvl:fire.level, _aq:aq});
+    const periods=Engine.periods({air, storm, wx, fire, _aq:aq});
     const activities=Engine.activities({air, heat, storm, wx});
-    App.bundle={ wx,aq,fires,evacF, air,fire,storm,heat,evac,status,periods,activities,
+    const watchNext=Engine.watchNext({air, storm, wx, fire});
+    const fireWind=fire.worst?Engine.fireWind(fire.worst, wx):null;
+    const bundle={ wx,aq,fires,evacF, air,fire,storm,heat,evac,status,periods,activities,watchNext,fireWind,
       ts:{ weather:wxR.at, air:aqR.at, fires:firesR.at, evac:evacR.at },
       ok:{ weather:wxR.ok, air:aqR.ok, fires:firesR.ok, evac:evacR.ok } };
+    // --- What Changed (vs the snapshot from the user's last visit) ---
+    const cur=Engine.snapshot(bundle);
+    bundle.changes = App.visitBaseline ? Engine.whatChanged(App.visitBaseline, cur) : [];
+    bundle.changeLabel = App.visitBaseline ? Engine.changeLabel(cur.at - App.visitBaseline.at) : null;
+    bundle.lastVisitAt = App.visitBaseline ? App.visitBaseline.at : null;
+    Store.saveSnap(Store.placeId(App.place), cur);   // advance stored state for next app open
+    App.bundle=bundle;
     UI.renderHome(); UI.renderForecast(); UI.renderMap(); UI.setFresh(false);
     App.refreshPlaceChips();
   },
 
   async statusForPlace(p){
     const [aqR, firesR, evacR] = await Promise.all([ Data.air(p.lat,p.lon), Data.fires(p.lat,p.lon), Data.evac(p.lat,p.lon) ]);
-    const air=Engine.air(aqR.data), fire=Engine.fire(firesR.data,null),
-      evac=Engine.evac(evacR.data,p.lat,p.lon);
+    const air=Engine.air(aqR.data), fire=Engine.fire(firesR.data,null), evac=Engine.evac(evacR.data,p.lat,p.lon);
     const st=Engine.status({air, fire, storm:{risk:0}, heat:{level:0}, evac});
-    return st;
+    // one short reason for the summary line
+    let reason;
+    if(st.state===0) reason = air.ok ? `AQHI ${air.aqhi!=null?air.aqhi:"—"}` : "No nearby concern";
+    else if(st.reasons[0]) reason = st.reasons[0].title;
+    else reason = "See details";
+    return { st, reason };
   },
   async refreshPlaceChips(){
     const list=Store.places();
     for(const p of list){
-      try{ const st=await App.statusForPlace(p); UI.updatePlaceChip(p, st); }catch(e){}
+      try{ const r=await App.statusForPlace(p); UI.updatePlaceChip(p, r.st, r.reason); }catch(e){}
     }
   }
 };
@@ -987,8 +1162,20 @@ const UI = {
   /* ---- Home ---- */
   renderHome(){
     const b=App.bundle; if(!b) return;
-    UI.renderAlert(); UI.renderStatus(); UI.renderWhy(); UI.renderPeriods();
-    UI.renderOutside(); UI.renderAir(); UI.renderFire(); UI.renderPlaces();
+    UI.renderAlert(); UI.renderStorm(); UI.renderStatus(); UI.renderWhy(); UI.renderChanged();
+    UI.renderPeriods(); UI.renderOutside(); UI.renderAir(); UI.renderFire();
+    UI.renderWatch(); UI.renderPlaces();
+  },
+  renderStorm(){
+    const m=UI.el('stormMount'); m.innerHTML="";
+    const b=App.bundle; if(!b||!b.storm) return;
+    const bo=Engine.boating(b);
+    if(!bo.warn) return;                       // only show the prominent banner when meaningful
+    const div=document.createElement('div'); div.className='alert alertlevel';
+    div.style.borderColor=C('--concern');
+    div.innerHTML=`<span class="tag" style="background:${C('--concern')}">⚡ ON THE WATER</span>
+      <h3>${esc(bo.headline)}</h3><p>${esc(bo.detail)}</p>`;
+    m.appendChild(div);
   },
   renderAlert(){
     const m=UI.el('alertMount'); m.innerHTML="";
@@ -1019,10 +1206,30 @@ const UI = {
   },
   renderWhy(){
     const s=App.bundle.status, card=UI.el('whyCard'), ul=UI.el('whyList');
-    if(!s.reasons.length){ card.style.display='none'; return; }
     card.style.display='';
+    if(s.state===0){
+      UI.el('whyTitle').textContent = "Why you're clear";
+      ul.innerHTML = (s.positives||[]).map(p=>`<li><span class="ic" style="color:${C('--clear')}">${p.ic}</span><span>${esc(p.t)}</span></li>`).join('');
+      return;
+    }
     UI.el('whyTitle').textContent = "Why you're on "+s.key;
-    ul.innerHTML = s.reasons.map(r=>`<li><span class="ic">${r.ic}</span><span>${r.t}</span></li>`).join('');
+    ul.innerHTML = s.reasons.map(r=>`<li><span class="ic">${r.ic}</span><span><b>${esc(r.title)}</b><span class="det">${esc(r.detail||"")}</span></span></li>`).join('');
+  },
+  renderChanged(){
+    const b=App.bundle, card=UI.el('changedCard'), ul=UI.el('changedList');
+    const ch=b.changes||[];
+    if(!b.lastVisitAt || !ch.length){ card.style.display='none'; return; }
+    card.style.display='';
+    UI.el('changedTitle').textContent = b.changeLabel || "What changed";
+    UI.el('changedMeta').textContent = `· last checked ${ago(b.lastVisitAt)}`;
+    ul.innerHTML = ch.map(c=>`<li><span class="ic">${c.ic}</span><span style="color:${c.worse?C('--concern'):(/^✓/.test(c.ic)||c.worse===false?C('--clear'):'inherit')}">${esc(c.t)}</span></li>`).join('');
+  },
+  renderWatch(){
+    const b=App.bundle, ul=UI.el('watchList');
+    const w=b.watchNext||[];
+    ul.innerHTML = w.length
+      ? w.map(x=>`<li><span class="ic">${x.ic}</span><span>${esc(x.t)}</span></li>`).join('')
+      : `<li><span class="ic" style="color:${C('--clear')}">✓</span><span class="muted">No significant changes expected in the next 12 hours.</span></li>`;
   },
   renderPeriods(){
     const p=App.bundle.periods, host=UI.el('periods');
@@ -1033,12 +1240,11 @@ const UI = {
   },
   renderOutside(){
     const a=App.bundle.activities;
-    UI.el('outUntil').textContent = a.until ? "Good until ~"+a.until.toLocaleTimeString('en-CA',{hour:'numeric',timeZone:CONFIG.TZ}).replace(':00','') : "";
+    UI.el('outUntil').textContent = a.bestWindow ? a.bestWindow.text : "";
     UI.el('acts').innerHTML = a.items.map(it=>{ const s=actStyle(it.score);
-      const vt = it.score>=3?'Avoid' : it.score===2?'Caution':'Good';
       return `<div class="act"><div class="aic" style="--rc:${s.rc};background:${s.bg};border-color:${s.border};box-shadow:0 7px 18px ${s.glow}, inset 0 1px 0 rgba(255,255,255,.07)">${it.ic}</div>`+
-        `<div class="an">${it.name}</div><div class="av" style="color:${s.rc}">${vt}</div></div>`; }).join('');
-    UI.el('outNote').textContent = a.note;
+        `<div class="an">${it.name}</div><div class="av" style="color:${s.rc}">${esc(it.phrase)}</div></div>`; }).join('');
+    UI.el('outNote').textContent = a.bestWindow && a.bestWindow.sub ? a.bestWindow.sub : a.note;
   },
   renderAir(){
     const air=App.bundle.air;
@@ -1060,18 +1266,21 @@ const UI = {
     if(!f.ok){ host.innerHTML=`<div class="err">Fire data unavailable right now. <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">Official map ↗</a></div>`; return; }
     if(!f.worst){ host.innerHTML=`<div class="frow"><div class="fem">✅</div><div><div class="fname">No active fires nearby</div><div class="fsub">Nothing active within ~200 km of here.</div></div></div>`; return; }
     const w=f.worst, dir=w.bearing!=null?Geo.compass(w.bearing):"";
+    const fw=App.bundle.fireWind;
+    const stale=(Date.now()-(App.bundle.ts.fires||0))>CONFIG.staleWarn.fires;
     host.innerHTML=`
       <div class="frow"><div class="fem">🔥</div><div>
         <div class="fname">${esc(w.name)}</div>
+        <div class="fsub"><span class="src">OFFICIAL · BC Wildfire</span></div>
         <div class="fsub">${esc(w.status||"Active")} · ${w.size!=null?fmtNum(w.size)+" ha":"size n/a"} · ${rnd(w.dist)} km ${dir}</div>
       </div></div>
-      <div class="concern">Nearby Fire Concern: <span class="b" style="background:${f.color}">${f.label}</span></div>
-      <div class="expl">${f.expl}</div>
+      <div class="concern"><span class="src">EMBERWATCH</span> Nearby Fire Concern: <span class="b" style="background:${f.color}">${f.label}</span></div>
+      <div class="expl"><b>Now:</b> ${fw?esc(fw.current):esc(f.expl)}${fw&&fw.later?`<br><b>Later:</b> ${esc(fw.later)}`:""}</div>
       <div class="btnrow">
         <button class="btn primary" id="viewFireBtn">🗺️ View on map</button>
         ${w.url?`<a class="btn" href="${esc(w.url)}" target="_blank" rel="noopener">Official info ↗</a>`:""}
       </div>
-      <div class="muted" style="font-size:11.5px;margin-top:10px">Fire data updated ${ago(App.bundle.ts.fires)} · BC Wildfire Service</div>`;
+      <div class="muted" style="font-size:11.5px;margin-top:10px">${stale?`⚠️ Fire information may be outdated — last update ${ago(App.bundle.ts.fires)}.`:`Fire data updated ${ago(App.bundle.ts.fires)} · BC Wildfire Service`}</div>`;
     const vb=UI.el('viewFireBtn'); if(vb) vb.addEventListener('click',()=>{ UI.showView('map'); setTimeout(()=>{ if(App.map)App.map.setView([w.lat,w.lon],9); },120); });
   },
   renderPlaces(){
@@ -1080,18 +1289,19 @@ const UI = {
     else host.innerHTML=list.map((p,i)=>{
       const on = Math.abs(p.lat-sel.lat)<0.01 && Math.abs(p.lon-sel.lon)<0.01;
       return `<button class="place${on?' sel':''}" data-i="${i}"><span class="d" data-chip style="background:var(--dim)"></span>
-        <span class="pn">${esc(p.name)}</span><span class="ps" data-chiptxt>…</span></button>`;
+        <span class="pcol"><span class="pn">${esc(p.name)}</span><span class="psub" data-chipsub>…</span></span>
+        <span class="ps" data-chiptxt></span></button>`;
     }).join('');
     host.querySelectorAll('.place').forEach(el=>el.addEventListener('click',()=>{ const p=list[+el.dataset.i]; App.selectPlace(p); }));
     // add-place button state
     UI.el('addPlaceBtn').textContent = list.some(p=>Math.abs(p.lat-sel.lat)<0.01&&Math.abs(p.lon-sel.lon)<0.01) ? "Manage saved places" : "＋ Save this location";
   },
-  updatePlaceChip(p, st){
+  updatePlaceChip(p, st, reason){
     const list=Store.places(); const i=list.findIndex(x=>x.name===p.name && Math.abs(x.lat-p.lat)<0.001);
     const el=document.querySelector(`#placesList .place[data-i="${i}"]`); if(!el)return;
     el.querySelector('[data-chip]').style.background=st.color;
-    el.querySelector('[data-chiptxt]').textContent=st.key;
-    el.querySelector('[data-chiptxt]').style.color=st.color;
+    const tx=el.querySelector('[data-chiptxt]'); tx.textContent=st.key; tx.style.color=st.color;
+    el.querySelector('[data-chipsub]').textContent = reason || "";
   },
 
   /* ---- Forecast ---- */
@@ -1285,7 +1495,7 @@ const UI = {
 
 /* App.selectPlace defined here (needs UI) */
 App.selectPlace=function(p){ App.place={name:p.name,lat:p.lat,lon:p.lon}; Store.saveSelected(App.place);
-  UI.setLoc(p.name); if(App.map) App.map.setView([p.lat,p.lon],9); App.load(); };
+  UI.setLoc(p.name); App.beginVisit(); if(App.map) App.map.setView([p.lat,p.lon],9); App.load(); };
 App.selectPlaceFromMap=function(lat,lon){ App.selectPlace({ name:nearestName(lat,lon), lat:+lat.toFixed(4), lon:+lon.toFixed(4) }); };
 
 /* -------------------------------- boot ---------------------------------- */

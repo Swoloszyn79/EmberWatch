@@ -1,7 +1,7 @@
 /* EmberWatch service worker — installable PWA + offline app shell.
    Strategy: cache the app shell so it opens instantly / offline.
    Live API calls (BC Wildfire, Open-Meteo) always go to the network. */
-const CACHE = 'emberwatch-v7';
+const CACHE = 'emberwatch-v8';
 const SHELL = [
   './',
   './index.html',
