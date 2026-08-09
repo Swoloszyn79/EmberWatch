@@ -147,6 +147,31 @@
   .day .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:7px;gap:4px}
   .chip{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:8px;color:#0a0f16;margin-top:7px}
 
+  /* ---------- activity tiles ---------- */
+  .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:760px){.acts{grid-template-columns:repeat(2,1fr)}}
+  .act{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px 16px;
+    position:relative;overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:rise .5s ease both}
+  .act::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent,transparent)}
+  .act .aico{font-size:28px;line-height:1}
+  .act .alabel{font-weight:700;font-family:var(--disp);font-size:16px;margin-top:8px}
+  .act .arate{font-size:13px;font-weight:800;margin-top:10px;display:inline-block;padding:5px 12px;border-radius:999px;color:#0a0f16}
+  .act .areason{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.45;min-height:36px}
+
+  /* ---------- reference / education ---------- */
+  .ref{margin:26px 2px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:2px 20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .ref summary{cursor:pointer;font-family:var(--disp);font-weight:700;font-size:17px;padding:16px 0;list-style:none;
+    display:flex;align-items:center;gap:8px}
+  .ref summary::-webkit-details-marker{display:none}
+  .ref summary::after{content:"⌄";margin-left:auto;color:var(--muted);font-size:20px;transition:transform .2s}
+  .ref[open] summary::after{transform:rotate(180deg)}
+  .ref-body{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 28px;padding:4px 0 18px}
+  @media(max-width:700px){.ref-body{grid-template-columns:1fr}}
+  .ref-item h4{font-family:var(--disp);font-size:14.5px;margin:12px 0 4px;color:var(--text)}
+  .ref-item p{font-size:13.5px;color:var(--muted);margin:0;line-height:1.55}
+  .ref-item strong{color:var(--text);font-weight:600}
+
   /* ---------- footer ---------- */
   footer{margin:34px 4px calc(20px + var(--sab));color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:18px;line-height:1.6}
   footer a{color:var(--muted);text-decoration:underline}
@@ -249,11 +274,51 @@
     </div>
   </div>
 
+  <div class="section-h">🏃 Can I Go Outside? <small>today's outdoor activity guidance for your area</small></div>
+  <div class="acts" id="activities"></div>
+
   <div class="section-h">📅 7-Day Outlook <small>weather · air quality · storm risk</small></div>
   <div class="strip" id="forecast"></div>
 
+  <div class="section-h">🌫️ Smoke Outlook <small>smoke level · PM2.5 · AQI · visibility, next few days</small></div>
+  <div class="strip" id="smoke-forecast"></div>
+
   <div class="section-h">🔥 Fire-Weather Outlook <small>how weather is loading (or easing) fire danger each day</small></div>
   <div class="strip" id="firewx"></div>
+
+  <details class="ref">
+    <summary>📖 Understanding these conditions</summary>
+    <div class="ref-body">
+      <div class="ref-item">
+        <h4>Air quality: AQHI vs. AQI</h4>
+        <p>Canada uses the <strong>Air Quality Health Index (AQHI)</strong>, a 1–10+ health-risk scale from Environment Canada based on ground-level ozone, NO₂ and fine particulate (PM2.5). <strong>1–3</strong> = low risk (enjoy normal activities), <strong>4–6</strong> = moderate (at-risk people should consider easing outdoor exertion), <strong>7–10</strong> = high (at-risk people avoid strenuous activity outdoors), <strong>10+</strong> = very high (everyone reduce/reschedule outdoor exertion). We also show the U.S. <strong>AQI</strong> (0–500) because it's more granular at high smoke levels and widely recognized. During wildfire smoke, PM2.5 is the number that matters most.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Wildfire risk near you</h4>
+        <p>This blends each fire's <strong>size</strong>, its <strong>stage of control</strong> (Out of Control → Being Held → Under Control), whether it's a <strong>“fire of note”</strong>, and how <strong>far</strong> it is. A small, contained fire close by stays low; a large, out-of-control fire drives the rating up even from farther away. Fire data is British Columbia only.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Fire-weather &amp; dryness</h4>
+        <p>Fires start and spread most easily when fuels are dry — driven by <strong>low afternoon humidity</strong>, <strong>days since meaningful rain</strong>, <strong>heat</strong> and <strong>wind</strong>. The dryness tag (Moist → Moderate → Dry → Very dry) summarizes that; “· 5d” means 5 days since ≥1 mm of rain. BC's official danger classes run Low → Moderate → High → Extreme; when it's High/Extreme, campfire and open-burning bans are common — check current bans before any burning.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Lightning &amp; storms</h4>
+        <p>Thunderstorm potential uses <strong>CAPE</strong> (atmospheric instability, in J/kg) plus precipitation and storm signals. Roughly: under 1,000 = low, 1,000–2,500 = moderate, above 2,500 = strong potential. Dry lightning is a leading cause of new wildfires, and open water is one of the most dangerous places to be during a storm.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Visibility</h4>
+        <p>The forecast visibility captures fog, rain and haze well. In thick wildfire smoke, real visibility can drop faster than the model shows, so treat it as a guide and lean on PM2.5/AQHI as the primary smoke signal. As a rule of thumb, visibility under ~5 km usually means heavy smoke.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Heat, cooling &amp; UV</h4>
+        <p>We flag heat by the <strong>feels-like</strong> high. In BC's interior, sustained daytime highs around the mid-30s °C with warm overnight lows are when Environment Canada issues heat warnings — hydrate, seek shade/AC, and check on neighbours. UV of 8+ is very high: sunscreen, hats and shade, especially for kids. Cold snaps and heavy rain are flagged too.</p>
+      </div>
+      <div class="ref-item">
+        <h4>Protecting yourself from smoke</h4>
+        <p>When smoke is heavy: stay indoors with windows closed, run a HEPA/air purifier or a well-fitted N95, avoid strenuous outdoor activity, and take breaks in cleaner-air spaces (libraries, malls, community centres). Children, seniors, pregnant people and those with heart or lung conditions are most sensitive.</p>
+      </div>
+    </div>
+  </details>
 
   <footer>
     <div>
@@ -364,7 +429,7 @@ function setLocation(lat,lon,name){
 
 // ---------------- DATA ----------------
 async function loadAll(){
-  setLoading(true);
+  setLoading(true); TODAY = {};
   document.getElementById('updated').innerHTML = `<span class="spin"></span>Updating…`;
   const results = await Promise.allSettled([ loadWeatherAndAir(), loadFires() ]);
   computeOverall(results);
@@ -375,21 +440,22 @@ async function loadAll(){
 function setLoading(b){ document.querySelectorAll('.card').forEach(c=>c.classList.toggle('loading',b)); }
 
 let LAST = { weather:null, air:null, fires:null };
+let TODAY = {}; // shared today-context for activity guidance
 
 async function loadWeatherAndAir(){
   const {lat,lon}=state;
   const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
-    `&timezone=${encodeURIComponent(TZ)}&forecast_days=7`+
+    `&timezone=${encodeURIComponent(TZ)}&forecast_days=7&past_days=3`+
     `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m`+
-    `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,cape`+
+    `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,cape,visibility`+
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset`;
   const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}`+
     `&timezone=${encodeURIComponent(TZ)}&forecast_days=5`+
-    `&current=us_aqi,pm2_5,pm10,ozone&hourly=us_aqi,pm2_5,pm10`;
+    `&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&hourly=us_aqi,pm2_5,pm10`;
   const [wx, aq] = await Promise.all([ fetchJSON(wUrl), fetchJSON(aUrl) ]);
   LAST.weather = wx; LAST.air = aq;
   renderWeatherCard(wx); renderStormCard(wx); renderSmokeCard(aq, wx);
-  renderForecast(wx, aq); renderFireWeather(wx);
+  renderActivities(); renderForecast(wx, aq); renderSmokeOutlook(wx, aq); renderFireWeather(wx);
   return {wx, aq};
 }
 
@@ -453,11 +519,41 @@ function renderFireMarkers(fires){
       `<br>${escapeHTML(f.geo)}${f.dist!=null?` · ${Math.round(f.dist)} km away`:""}${link}`);
   });
 }
-function statusRank(s){ s=(s||"").toLowerCase();
-  if(s.includes("out of control")) return 3;
-  if(s.includes("being held")) return 2;
-  if(s.includes("under control")||s.includes("patrol")) return 1;
-  return 2;
+// --- Fire threat model: severity (size + stage of control) attenuated by distance ---
+function statusWeight(s){ s=(s||"").toLowerCase();
+  if(s.includes("out of control")) return 1.0;   // actively spreading
+  if(s.includes("being held"))     return 0.5;    // not expected to grow under current conditions
+  if(s.includes("under control")||s.includes("patrol")) return 0.18; // contained
+  if(s.includes("new"))            return 0.8;     // just detected, unassessed
+  return 0.7;                                       // unknown → treat as fairly active
+}
+function sizeWeight(ha){
+  if(ha==null) return 0.25;
+  if(ha<1)    return 0.08;
+  if(ha<10)   return 0.20;
+  if(ha<100)  return 0.40;
+  if(ha<1000) return 0.65;
+  if(ha<5000) return 0.85;
+  return 1.0;
+}
+function distanceFactor(km){
+  if(km<=5)   return 1.0;
+  if(km<=15)  return 0.85;
+  if(km<=30)  return 0.62;
+  if(km<=50)  return 0.45;
+  if(km<=80)  return 0.35;
+  if(km<=120) return 0.20;
+  if(km<=180) return 0.08;
+  return 0;
+}
+function fireHazard(f){                             // intrinsic severity, ~0..1.15
+  let h = statusWeight(f.status)*0.55 + sizeWeight(f.size)*0.55;
+  if(f.ofNote) h += 0.15;                           // "fire of note" = significant / threatening
+  return Math.min(1.15, h);
+}
+function fireRiskScore(f){ return fireHazard(f) * distanceFactor(f.dist); }
+function scoreToLevel(x){
+  if(x>=0.70) return 4; if(x>=0.50) return 3; if(x>=0.33) return 2; if(x>=0.19) return 1; return 0;
 }
 function renderFireCard(fires){
   const near = fires.filter(f=>f.dist!=null).sort((a,b)=>a.dist-b.dist);
@@ -468,22 +564,28 @@ function renderFireCard(fires){
     risk=0; metric=`<span style="color:var(--good)">No active fires nearby</span>`;
     note="No active wildfires within roughly 200 km of this spot right now.";
   }else{
-    const d=nearest.dist, sr=statusRank(nearest.status), big=(nearest.size||0)>=1000;
-    if(d<=10) risk=4; else if(d<=25) risk=3; else if(d<=50) risk=2; else if(d<=100) risk=1; else risk=0;
-    if(sr>=3) risk+=0.6; if(big) risk+=0.4; if(nearest.ofNote) risk+=0.5;
-    risk=Math.min(4,risk);
+    // Risk is driven by the most THREATENING fire (size + stage of control + distance),
+    // not simply the closest one. A small, contained fire nearby stays low.
+    let worst=nearest, worstScore=-1;
+    near.forEach(f=>{ const s=fireRiskScore(f); if(s>worstScore){ worstScore=s; worst=f; } });
+    risk = scoreToLevel(worstScore);
     metric = `${Math.round(nearest.dist)} <small>km to nearest fire</small>`;
+    const sizeTxt = worst.size!=null ? `${fmtNum(worst.size)} ha` : "size unconfirmed";
     note = `${within50.length} active fire${within50.length!==1?"s":""} within 50 km. `+
-           `Nearest: ${escapeHTML(nearest.name)} — ${escapeHTML(nearest.status||"active")}`+
-           (nearest.size!=null?`, ${fmtNum(nearest.size)} ha.`:".");
+           `Biggest concern: ${escapeHTML(worst.name)} — ${escapeHTML(worst.status||"active")}, `+
+           `${sizeTxt}, ${Math.round(worst.dist)} km away.`;
+    if(worst!==nearest && nearest.dist<worst.dist){
+      note += ` (Closest fire, ${Math.round(nearest.dist)} km, is ${escapeHTML((nearest.status||'active').toLowerCase())} and smaller.)`;
+    }
   }
   const li = levelInfo(risk);
   document.getElementById('fire-metric').innerHTML = metric;
   document.getElementById('fire-note').textContent = note;
-  setBadge('card-fire', nearest?li.label:"None", nearest?li.col:COLORS.none);
+  setBadge('card-fire', nearest?li.label:"None", nearest? (risk===0?COLORS.none:li.col) :COLORS.none);
   const list=document.getElementById('fire-list'); list.innerHTML="";
-  near.slice(0,4).forEach(f=>{
-    const col = f.dist<=25?COLORS.extreme : f.dist<=50?COLORS.high : f.dist<=100?COLORS.mod:COLORS.low;
+  near.slice(0,5).forEach(f=>{
+    const lvl=scoreToLevel(fireRiskScore(f));
+    const col=[COLORS.none,COLORS.mod,COLORS.high,COLORS.extreme,COLORS.extreme][lvl];
     const el=document.createElement('li');
     el.innerHTML=`<span class="dot" style="background:${col}"></span>`+
       `<span><b>${Math.round(f.dist)} km</b> · ${escapeHTML(f.name)} `+
@@ -508,6 +610,28 @@ function aqiCat(aqi){
   if(aqi<=300) return {label:"Very Unhealthy",col:COLORS.hazard,risk:4,desc:"Health alert — avoid outdoor exertion, keep windows closed."};
   return {label:"Hazardous",col:COLORS.hazard,risk:4,desc:"Emergency conditions — stay indoors with filtered air if possible."};
 }
+// Canadian Air Quality Health Index (Environment Canada 3-3-3 formula).
+// O3 & NO2 expected in ppb, PM2.5 in µg/m³. Open-Meteo returns µg/m³, so convert gases.
+function ugToPpb(ug, mw){ return ug!=null ? ug*24.45/mw : 0; } // ~25°C, 1 atm
+function computeAQHI(o3_ug, no2_ug, pm25){
+  if(o3_ug==null && no2_ug==null && pm25==null) return null;
+  const o3=ugToPpb(o3_ug,48.00), no2=ugToPpb(no2_ug,46.01), pm=(pm25||0);
+  const v=(1000/10.4)*((Math.exp(0.000537*o3)-1)+(Math.exp(0.000871*no2)-1)+(Math.exp(0.000487*pm)-1));
+  return Math.max(1, Math.round(v));
+}
+function aqhiCat(v){
+  if(v==null) return {label:"—",col:COLORS.muted};
+  if(v<=3)  return {label:"Low health risk",col:COLORS.good};
+  if(v<=6)  return {label:"Moderate health risk",col:COLORS.mod};
+  if(v<=10) return {label:"High health risk",col:COLORS.high};
+  return {label:"Very high health risk",col:COLORS.hazard};
+}
+function bearingTo(la1,lo1,la2,lo2){
+  const y=Math.sin(rad(lo2-lo1))*Math.cos(rad(la2));
+  const x=Math.cos(rad(la1))*Math.sin(rad(la2))-Math.sin(rad(la1))*Math.cos(rad(la2))*Math.cos(rad(lo2-lo1));
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function angDiff(a,b){ let d=Math.abs(a-b)%360; return d>180?360-d:d; }
 function renderSmokeCard(aq, wx){
   const cur = aq && aq.current ? aq.current : null;
   let peak=null, peakPM=null;
@@ -527,12 +651,31 @@ function renderSmokeCard(aq, wx){
   let smokeNote = cat.desc;
   if(peak!=null && peak>(nowAqi||0)+15) smokeNote += ` Peaks near ${Math.round(peak)} in the next 24h.`;
   if(peakPM!=null) smokeNote += ` PM2.5 up to ${Math.round(peakPM)} µg/m³.`;
-  if(wx && wx.current && wx.current.wind_direction_10m!=null && (peakPM||0)>=20){
-    smokeNote += ` Wind from the ${compass(wx.current.wind_direction_10m)}.`;
-  }
+  const aqhi = cur ? computeAQHI(cur.ozone, cur.nitrogen_dioxide, cur.pm2_5) : null;
+  if(aqhi!=null){ const ac=aqhiCat(aqhi); TODAY.aqhi=aqhi;
+    smokeNote += ` Canada AQHI ${aqhi>10?'10+':aqhi} — ${ac.label}.`; }
+  const visNow = nearestHourly(wx,'visibility');
+  if(visNow!=null){ TODAY.visNow = visNow/1000; smokeNote += ` Visibility ~${Math.round(visNow/1000)} km.`; }
+  TODAY.windDir = (wx&&wx.current)?wx.current.wind_direction_10m:null;
+  TODAY.smokeBase = smokeNote;
   document.getElementById('smoke-note').textContent = smokeNote;
   setBadge('card-smoke', cat.label, cat.col);
   document.getElementById('card-smoke').dataset.risk = cat.risk;
+  TODAY.aqi = Math.max(nowAqi||0, peak||0); TODAY.pm25 = peakPM;
+}
+// Adds wind + smoke-drift context once fires are also loaded (fires + wind arrive in parallel).
+function updateSmokeContext(){
+  if(!TODAY.smokeBase) return;
+  const wd=TODAY.windDir; let suffix="";
+  const fires=(LAST.fires||[]).filter(f=>f.dist!=null && f.dist<=150).sort((a,b)=>fireRiskScore(b)-fireRiskScore(a));
+  const src=fires[0];
+  if(wd!=null && src){
+    const diff=angDiff(bearingTo(state.lat,state.lon,src.lat,src.lon), wd); // wind_direction = source dir
+    if(diff<=55) suffix=` 💨 Wind from the ${compass(wd)}: the ${escapeHTML(src.name)} fire (${Math.round(src.dist)} km) is upwind — its smoke may drift your way.`;
+    else if(diff>=125) suffix=` 💨 Wind from the ${compass(wd)}: currently pushing the ${escapeHTML(src.name)} fire's smoke away from you.`;
+    else suffix=` 💨 Wind from the ${compass(wd)}.`;
+  } else if(wd!=null && (TODAY.pm25||0)>=20){ suffix=` 💨 Wind from the ${compass(wd)}.`; }
+  document.getElementById('smoke-note').textContent = TODAY.smokeBase + suffix;
 }
 function renderStormCard(wx){
   if(!wx||!wx.hourly){ setBadge('card-storm','n/a',COLORS.muted); return; }
@@ -564,12 +707,13 @@ function renderStormCard(wx){
   document.getElementById('storm-note').textContent = note;
   setBadge('card-storm', risk===0?"Low":li.label, risk===0?COLORS.good:li.col);
   document.getElementById('card-storm').dataset.risk = risk;
+  TODAY.stormRisk = risk;
 }
 function renderWeatherCard(wx){
   if(!wx||!wx.current||!wx.daily){ setBadge('card-weather','n/a',COLORS.muted); return; }
-  const c=wx.current, d=wx.daily;
-  const hi=d.temperature_2m_max[0], lo=d.temperature_2m_min[0], feels=d.apparent_temperature_max[0];
-  const rain=d.precipitation_sum[0], pop=d.precipitation_probability_max[0];
+  const c=wx.current, d=wx.daily, dIdx=dayIndex(d);
+  const hi=d.temperature_2m_max[dIdx], lo=d.temperature_2m_min[dIdx], feels=d.apparent_temperature_max[dIdx];
+  const rain=d.precipitation_sum[dIdx], pop=d.precipitation_probability_max[dIdx];
   document.getElementById('weather-metric').innerHTML =
     `${Math.round(c.temperature_2m)}° <small>now · ${Math.round(hi)}° / ${Math.round(lo)}° today</small>`;
   let risk=0, tags=[];
@@ -581,22 +725,24 @@ function renderWeatherCard(wx){
   if(rain>=25){risk=Math.max(risk,3);tags.push("Heavy rain");}
   else if(rain>=10){risk=Math.max(risk,2);tags.push("Rain");}
   else if(rain>=1){tags.push("Showers");}
-  let note = `${wcodeText(d.weather_code[0])}. `;
+  let note = `${wcodeText(d.weather_code[dIdx])}. `;
   if(rain>=0.5) note += `${fmtNum(rain)} mm expected (${Math.round(pop||0)}% chance). `;
   else note += `Little or no rain (${Math.round(pop||0)}% chance). `;
-  note += `Feels-like high ${Math.round(feels)}°. UV index ${Math.round(d.uv_index_max[0]||0)}.`;
+  note += `Feels-like high ${Math.round(feels)}°. UV index ${Math.round(d.uv_index_max[dIdx]||0)}.`;
   document.getElementById('weather-note').textContent = note;
   const li = levelInfo(risk);
   setBadge('card-weather', tags.length?tags[0]:"Calm", risk===0?COLORS.good:li.col);
   document.getElementById('card-weather').dataset.risk = risk;
+  TODAY.feelsHigh = feels; TODAY.hi = hi; TODAY.lo = lo;
+  TODAY.uv = d.uv_index_max[dIdx]; TODAY.gustMax = d.wind_gusts_10m_max[dIdx];
 }
 
 // ---------------- STRIPS ----------------
 function renderForecast(wx, aq){
   const el=document.getElementById('forecast'); el.innerHTML="";
   if(!wx||!wx.daily){ el.innerHTML="<div class='err'>Forecast unavailable.</div>"; return; }
-  const d=wx.daily, dayAqi=dailyPeakAqi(aq);
-  for(let i=0;i<d.time.length;i++){
+  const d=wx.daily, dayAqi=dailyPeakAqi(aq), start=dayIndex(d);
+  for(let i=start;i<d.time.length;i++){
     const date=new Date(d.time[i]+"T12:00:00");
     const dow=date.toLocaleDateString('en-CA',{weekday:'short',timeZone:TZ});
     const dm=date.toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:TZ});
@@ -608,7 +754,7 @@ function renderForecast(wx, aq){
       <div class="wx">${wcodeEmoji(d.weather_code[i])}</div>
       <div class="temps">${Math.round(d.temperature_2m_max[i])}° <span class="lo">${Math.round(d.temperature_2m_min[i])}°</span></div>
       <div class="row"><span>💧 ${Math.round(pop||0)}%</span><span>${rain>=0.1?fmtNum(rain)+'mm':'—'}</span></div>
-      <div class="row"><span>💨 ${Math.round(d.wind_gusts_10m_max[i]||0)}</span><span>UV ${Math.round(d.uv_index_max[i]||0)}</span></div>
+      <div class="row" style="justify-content:center"><span>☀️ UV ${Math.round(d.uv_index_max[i]||0)}</span></div>
       ${aqi!=null?`<span class="chip" style="background:${cat.col}">AQI ${Math.round(aqi)}</span>`:``}
       ${storm?`<span class="chip" style="background:${COLORS.extreme}">⛈️ Storm</span>`:``}`;
     el.appendChild(div);
@@ -621,13 +767,120 @@ function dailyPeakAqi(aq){
     if(out[day]==null||v>out[day]) out[day]=v;
   } return out;
 }
-function fireWxRisk(tmax, rhmin, windmax, rain){
+function dailyPeakPM(aq){
+  const out={}; if(!aq||!aq.hourly||!aq.hourly.pm2_5) return out;
+  for(let i=0;i<aq.hourly.time.length;i++){
+    const day=aq.hourly.time[i].slice(0,10), v=aq.hourly.pm2_5[i]; if(v==null)continue;
+    if(out[day]==null||v>out[day]) out[day]=v;
+  } return out;
+}
+function dailyMinVis(wx){
+  const out={}; if(!wx||!wx.hourly||!wx.hourly.visibility) return out;
+  for(let i=0;i<wx.hourly.time.length;i++){
+    const day=wx.hourly.time[i].slice(0,10), v=wx.hourly.visibility[i]; if(v==null)continue;
+    if(out[day]==null||v<out[day]) out[day]=v;   // metres
+  } return out;
+}
+function nearestHourly(wx,key){
+  if(!wx||!wx.hourly||!wx.hourly[key]||!wx.hourly.time) return null;
+  const now=Date.now(); let best=null,bd=Infinity;
+  for(let i=0;i<wx.hourly.time.length;i++){
+    const t=new Date(wx.hourly.time[i]).getTime(), dd=Math.abs(t-now);
+    if(dd<bd && wx.hourly[key][i]!=null){ bd=dd; best=wx.hourly[key][i]; }
+  }
+  return best;
+}
+function smokeLevel(pm){
+  if(pm==null) return {label:"—",emoji:"❓",col:COLORS.muted};
+  if(pm<=9)   return {label:"Clear air",     emoji:"☀️",col:COLORS.none};
+  if(pm<=35)  return {label:"Light haze",    emoji:"🌤️",col:COLORS.mod};
+  if(pm<=55)  return {label:"Moderate smoke",emoji:"🌫️",col:COLORS.high};
+  if(pm<=150) return {label:"Heavy smoke",   emoji:"🌫️",col:COLORS.extreme};
+  return {label:"Very heavy smoke",emoji:"🚨",col:COLORS.hazard};
+}
+
+// ---- Outdoor activity guidance ----
+function renderActivities(){
+  const el=document.getElementById('activities'); if(!el) return;
+  const aqi=(TODAY.aqi!=null)?TODAY.aqi:null, feels=TODAY.feelsHigh, lo=TODAY.lo,
+        uv=TODAY.uv, storm=TODAY.stormRisk||0, gust=TODAY.gustMax;
+  const RATE=[{l:"Great",c:COLORS.none},{l:"Good",c:COLORS.low},{l:"Use caution",c:COLORS.mod},{l:"Limit it",c:COLORS.high},{l:"Not advised",c:COLORS.extreme}];
+  const air=(sens)=>{ if(aqi==null)return{s:0,m:""}; if(aqi<=50)return{s:0,m:"air quality is good"};
+    if(aqi<=100)return{s:sens?2:1,m:"air quality is moderate"}; if(aqi<=150)return{s:sens?3:2,m:"smoke / AQI is elevated"};
+    if(aqi<=200)return{s:sens?4:3,m:"air is unhealthy"}; return{s:4,m:"air is very unhealthy — stay indoors"}; };
+  const heat=(k)=>{ if(feels==null)return{s:0,m:""}; if(feels>=37)return{s:k?4:3,m:"extreme heat"};
+    if(feels>=33)return{s:k?3:2,m:"very hot — heat-stress risk"}; if(feels>=29)return{s:1,m:"warm — hydrate often"}; return{s:0,m:""}; };
+  const cold=(k)=>{ if(lo==null)return{s:0,m:""}; if(lo<=-20)return{s:k?4:3,m:"extreme cold"};
+    if(lo<=-10)return{s:k?3:2,m:"very cold"}; if(lo<=-5)return{s:1,m:"cold — bundle up"}; return{s:0,m:""}; };
+  const stm=(lake)=>{ if(!storm)return{s:0,m:""}; if(lake){ if(storm>=2)return{s:4,m:"thunderstorms — stay off the water"}; return{s:3,m:"lightning risk — dangerous on open water"}; }
+    if(storm>=3)return{s:3,m:"thunderstorms likely — seek shelter"}; if(storm>=2)return{s:2,m:"storms possible — watch the sky"}; return{s:1,m:"slight storm chance"}; };
+  const wind=()=>{ if(gust==null)return{s:0,m:""}; if(gust>=45)return{s:3,m:"strong winds — rough water"}; if(gust>=30)return{s:2,m:"breezy — choppy water"}; return{s:0,m:""}; };
+  const uvf=()=>{ if(uv==null)return{s:0,m:""}; if(uv>=8)return{s:1,m:"very high UV — sunscreen & shade"}; return{s:0,m:""}; };
+  const pick=(icon,label,factors,good)=>{ let b={s:-1,m:""}; factors.forEach(f=>{ if(f&&f.s>b.s)b=f; });
+    const s=Math.max(0,b.s); return {icon,label,score:s,reason:(s===0?good:b.m)}; };
+  const acts=[
+    pick("🏃","Outdoor exercise",[air(false),heat(false),stm(false)],"great for a workout"),
+    pick("🧒","Kids outside",[air(true),heat(true),cold(true),stm(false),uvf()],"good for outdoor play"),
+    pick("🚤","On the lake",[stm(true),wind(),air(false),heat(false)],"great day on the water"),
+    pick("🌳","Short outings",[air(false),heat(false),(storm>=2?{s:2,m:"storms possible"}:{s:0,m:""})],"comfortable to be outside")
+  ];
+  el.innerHTML=acts.map(a=>{ const r=RATE[Math.min(4,a.score)];
+    return `<div class="act" style="--accent:${r.c}"><div class="aico">${a.icon}</div>`+
+      `<div class="alabel">${a.label}</div><span class="arate" style="background:${r.c}">${r.l}</span>`+
+      `<div class="areason">${escapeHTML(a.reason)}</div></div>`; }).join('');
+}
+
+// ---- Multi-day smoke outlook ----
+function renderSmokeOutlook(wx, aq){
+  const el=document.getElementById('smoke-forecast'); if(!el) return; el.innerHTML="";
+  if(!aq||!aq.hourly){ el.innerHTML="<div class='err'>Smoke outlook unavailable.</div>"; return; }
+  const aqiD=dailyPeakAqi(aq), pmD=dailyPeakPM(aq), visD=dailyMinVis(wx);
+  const days=Object.keys(pmD).sort().slice(0,6);
+  if(!days.length){ el.innerHTML="<div class='err'>Smoke outlook unavailable.</div>"; return; }
+  days.forEach(day=>{
+    const date=new Date(day+"T12:00:00");
+    const dow=date.toLocaleDateString('en-CA',{weekday:'short',timeZone:TZ});
+    const dm=date.toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:TZ});
+    const pm=pmD[day], aqi=aqiD[day], lvl=smokeLevel(pm), vis=visD[day];
+    const visKm = vis!=null ? Math.round(vis/1000) : null;
+    const div=document.createElement('div'); div.className='day';
+    div.innerHTML=`
+      <div class="dow">${dow}</div><div class="date">${dm}</div>
+      <div class="wx">${lvl.emoji}</div>
+      <span class="chip" style="background:${lvl.col};display:block;margin:4px auto">${lvl.label}</span>
+      <div class="row"><span>AQI ${aqi!=null?Math.round(aqi):'—'}</span><span>PM ${pm!=null?Math.round(pm):'—'}</span></div>
+      <div class="row"><span>👁️ Visibility</span><span>${visKm!=null?visKm+' km':'—'}</span></div>`;
+    el.appendChild(div);
+  });
+}
+// Fire-weather risk — dryness is the dominant driver (low humidity + no recent rain),
+// amplified by heat and wind, dampened by rain that day.
+function fireWxRisk(tmax, rhmin, windmax, rain, drySpell){
   let s=0;
-  if(tmax>=30)s+=2; else if(tmax>=25)s+=1;
-  if(rhmin!=null){ if(rhmin<=25)s+=2; else if(rhmin<=40)s+=1; }
-  if(windmax>=40)s+=2; else if(windmax>=25)s+=1;
-  if(rain>=5)s-=2; else if(rain>=1)s-=1;
-  return Math.max(0,Math.min(4,s));
+  if(rhmin!=null){ if(rhmin<=20)s+=2.5; else if(rhmin<=30)s+=2; else if(rhmin<=40)s+=1; else if(rhmin<=55)s+=0.5; }
+  if(drySpell!=null){ if(drySpell>=7)s+=1.5; else if(drySpell>=4)s+=1; else if(drySpell>=2)s+=0.5; }
+  if(tmax>=32)s+=1.5; else if(tmax>=27)s+=1; else if(tmax>=22)s+=0.5;
+  if(windmax>=45)s+=1.5; else if(windmax>=30)s+=1; else if(windmax>=20)s+=0.5;
+  if(rain>=10)s-=2.5; else if(rain>=3)s-=1.5; else if(rain>=1)s-=0.7;
+  s=Math.max(0,s);
+  if(s>=5)return 4; if(s>=3.6)return 3; if(s>=2.2)return 2; if(s>=1)return 1; return 0;
+}
+// Consecutive dry days (<1 mm) ending at each day, using recent-past + forecast precip.
+function drySpellArray(d){
+  const p=(d&&d.precipitation_sum)||[], out=[]; let run=0;
+  for(let i=0;i<p.length;i++){ if((p[i]||0)>=1) run=0; else run++; out[i]=run; }
+  return out;
+}
+function dryLevel(rhmin, spell, rainDay){
+  if(rainDay>=3) return {label:"Wet",col:COLORS.none};
+  let score=0;
+  if(rhmin!=null){ if(rhmin<=20)score+=2; else if(rhmin<=30)score+=1.5; else if(rhmin<=45)score+=0.5; }
+  if(spell>=7)score+=1.5; else if(spell>=4)score+=1; else if(spell>=2)score+=0.5;
+  if(rainDay>=1)score-=1;
+  if(score>=2.5) return {label:"Very dry",col:COLORS.extreme};
+  if(score>=1.5) return {label:"Dry",col:COLORS.high};
+  if(score>=0.6) return {label:"Moderate",col:COLORS.mod};
+  return {label:"Moist",col:COLORS.none};
 }
 function dailyMinRH(wx){
   const out={}; if(!wx||!wx.hourly||!wx.hourly.relative_humidity_2m) return out;
@@ -639,26 +892,30 @@ function dailyMinRH(wx){
 function renderFireWeather(wx){
   const el=document.getElementById('firewx'); el.innerHTML="";
   if(!wx||!wx.daily){ el.innerHTML="<div class='err'>Unavailable.</div>"; return; }
-  const d=wx.daily, rh=dailyMinRH(wx), labels=["Low","Moderate","High","Very High","Extreme"];
-  for(let i=0;i<d.time.length;i++){
+  const d=wx.daily, rh=dailyMinRH(wx), spells=drySpellArray(d), start=dayIndex(d);
+  const labels=["Low","Moderate","High","Very High","Extreme"];
+  for(let i=start;i<d.time.length;i++){
     const date=new Date(d.time[i]+"T12:00:00");
     const dow=date.toLocaleDateString('en-CA',{weekday:'short',timeZone:TZ});
     const dm=date.toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:TZ});
-    const r=fireWxRisk(d.temperature_2m_max[i], rh[d.time[i]], d.wind_gusts_10m_max[i]||0, d.precipitation_sum[i]||0);
-    const li=levelInfo(r);
+    const rhmin=rh[d.time[i]], rainDay=d.precipitation_sum[i]||0, gust=d.wind_gusts_10m_max[i]||0, spell=spells[i]||0;
+    const r=fireWxRisk(d.temperature_2m_max[i], rhmin, gust, rainDay, spell);
+    const li=levelInfo(r), dry=dryLevel(rhmin, spell, rainDay);
     const div=document.createElement('div'); div.className='day';
     div.innerHTML=`
       <div class="dow">${dow}</div><div class="date">${dm}</div>
       <div class="wx">${r>=3?'🔥':r>=1?'🌤️':'✅'}</div>
       <span class="chip" style="background:${r===0?COLORS.good:li.col};display:block;margin:4px auto">${labels[r]}</span>
-      <div class="row"><span>🌡️${Math.round(d.temperature_2m_max[i])}°</span><span>RH ${rh[d.time[i]]!=null?Math.round(rh[d.time[i]])+'%':'—'}</span></div>
-      <div class="row"><span>💨${Math.round(d.wind_gusts_10m_max[i]||0)}</span><span>${(d.precipitation_sum[i]||0)>=0.1?fmtNum(d.precipitation_sum[i])+'mm':'dry'}</span></div>`;
+      <div class="row"><span>🌡️${Math.round(d.temperature_2m_max[i])}°</span><span>RH ${rhmin!=null?Math.round(rhmin)+'%':'—'}</span></div>
+      <div class="row"><span>💨${Math.round(gust)}</span><span>${rainDay>=0.1?fmtNum(rainDay)+'mm':'dry'}</span></div>
+      <span class="chip" style="background:${dry.col};display:block;margin:6px auto 0">💧 ${dry.label}${(spell>=2&&rainDay<1)?` · ${spell}d`:''}</span>`;
     el.appendChild(div);
   }
 }
 
 // ---------------- OVERALL ----------------
 function computeOverall(){
+  try{ updateSmokeContext(); }catch(e){}
   const cards=['card-fire','card-smoke','card-storm','card-weather'];
   let max=-1, drivers=[];
   const names={'card-fire':'wildfire','card-smoke':'smoke/air quality','card-storm':'storms','card-weather':'heat/rain'};
@@ -738,6 +995,8 @@ function haversine(la1,lo1,la2,lo2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 function rad(d){return d*Math.PI/180;}
+function todayISO(){ return new Date().toLocaleDateString('en-CA',{timeZone:TZ}); } // YYYY-MM-DD
+function dayIndex(d){ if(!d||!d.time) return 0; const i=d.time.indexOf(todayISO()); return i>=0?i:Math.max(0,d.time.length-7); }
 function fmtNum(n){ if(n==null)return"—"; if(n>=100)return Math.round(n).toLocaleString(); if(n>=10)return n.toFixed(0); return (Math.round(n*10)/10).toString(); }
 function compass(deg){const dirs=["N","NE","E","SE","S","SW","W","NW"];return dirs[Math.round(deg/45)%8];}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}

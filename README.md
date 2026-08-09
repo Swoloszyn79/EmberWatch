@@ -13,12 +13,15 @@ Built to be dead-simple: open it, tap the map (or search / use your GPS), and in
 ## What it shows
 
 - **📍 Pick your location** — tap anywhere on the map, search a place, use your GPS, or jump to a community.
-- **🔥 Wildfire** — active fires near you from the BC Wildfire Service, with distance, size, stage of control, and fire perimeters drawn on the map.
-- **🌫️ Smoke & Air Quality** — current and next-24h US AQI + PM2.5, with wind-direction context.
+- **🔥 Wildfire** — active fires near you from the BC Wildfire Service. Risk is driven by each fire's **size** and **stage of control** (Out of Control → Being Held → Under Control), not just distance, so a small contained fire nearby stays low while a large out-of-control one raises the rating even from farther away. Perimeters are drawn on the map.
+- **🌫️ Smoke & Air Quality** — current and next-24h US AQI + PM2.5, the **Canadian AQHI** (Environment Canada's health index), visibility distance, and smart **smoke-drift** context (whether the nearest fire is upwind of you).
+- **🏃 "Can I Go Outside?"** — plain-language guidance for outdoor exercise, kids playing outside, going on the lake, and short outings — blending air quality, heat, storms/lightning, wind and UV.
 - **⛈️ Lightning & Storms** — thunderstorm potential over the next 24h (instability/CAPE + storm codes), with timing.
 - **🌡️ Rain, Heat & Cooling** — precipitation, highs/lows, feels-like, heat-warning range and UV.
 - **📅 7-Day Outlook** — weather, air quality and storm risk per day.
-- **🔥 Fire-Weather Outlook** — a hot-dry-windy index per day so you can see when fire danger is building.
+- **🌫️ Smoke Outlook** — smoke level, PM2.5, AQI and visibility for the next several days.
+- **🔥 Fire-Weather Outlook** — a per-day fire-danger index driven by **dryness** (low humidity + days since rain), heat and wind, with a dryness tag for each day.
+- **📖 Understanding these conditions** — a built-in reference explaining AQHI vs AQI, fire-weather & dryness, lightning, visibility, heat and smoke-protection tips.
 - **⚠️ Overall risk banner** — one glance tells you the day's top concern.
 
 ## Install it on your phone (PWA)
