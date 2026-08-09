@@ -1,90 +1,57 @@
 # 🔥 EmberWatch
 
-A live, installable dashboard that shows the **wildfire, smoke, air-quality, lightning/storm, rain and heat risks** for any location — for **today and the next 7 days**, all on one screen.
+**Understand the fire, smoke, air-quality and weather conditions around you — in about five seconds.**
 
-Built to be dead-simple: open it, tap the map (or search / use your GPS), and instantly understand what the day's weather and environmental conditions mean for you. Installs to your phone's home screen like a native app.
+EmberWatch is a mobile-first local environmental safety app. Open it and one plain-language status tells you what you need to know right now; the detail is there if you want it. Built for people living in wildfire-prone communities to open every morning during fire season.
 
-**➡️ Live demo:** _add your GitHub Pages URL here once published_
-
-> _Tip: once it's live, take a screenshot, save it as `screenshot.png` here, and add `![EmberWatch](screenshot.png)` to this file._
+**➡️ Live:** https://swoloszyn79.github.io/EmberWatch/
 
 ---
 
-## What it shows
+## What it does
 
-- **📍 Pick your location** — tap anywhere on the map, search a place, use your GPS, or jump to a community.
-- **🔥 Wildfire** — active fires near you from the BC Wildfire Service. Risk is driven by each fire's **size** and **stage of control** (Out of Control → Being Held → Under Control), not just distance, so a small contained fire nearby stays low while a large out-of-control one raises the rating even from farther away. Perimeters are drawn on the map.
-- **🌫️ Smoke & Air Quality** — current and next-24h US AQI + PM2.5, the **Canadian AQHI** (Environment Canada's health index), visibility distance, and smart **smoke-drift** context (whether the nearest fire is upwind of you).
-- **🏃 "Can I Go Outside?"** — plain-language guidance for outdoor exercise, kids playing outside, going on the lake, and short outings — blending air quality, heat, storms/lightning, wind and UV.
-- **⛈️ Lightning & Storms** — thunderstorm potential over the next 24h (instability/CAPE + storm codes), with timing.
-- **🌡️ Rain, Heat & Cooling** — precipitation, highs/lows, feels-like, heat-warning range and UV.
-- **📅 7-Day Outlook** — weather, air quality and storm risk per day.
-- **🌫️ Smoke Outlook** — smoke level, PM2.5, AQI and visibility for the next several days.
-- **🔥 Fire-Weather Outlook** — a per-day fire-danger index driven by **dryness** (low humidity + days since rain), heat and wind, with a dryness tag for each day.
-- **📖 Understanding these conditions** — a built-in reference explaining AQHI vs AQI, fire-weather & dryness, lightning, visibility, heat and smoke-protection tips.
-- **⚠️ Overall risk banner** — one glance tells you the day's top concern.
+- **One clear status** — 🟢 CLEAR · 🟡 WATCH · 🟠 CONCERN · 🔴 ACT NOW — with a plain sentence and an explainable **“Why you're on …”**.
+- **Official alerts always win** — real BC evacuation orders/alerts are shown above everything and override EmberWatch's own assessment. Official vs. EmberWatch classifications are kept clearly separate.
+- **NOW / TONIGHT / TOMORROW** — human-readable interpretation, not raw numbers, each with a confidence level.
+- **Can I go outside?** — simple guidance for Kids, Exercise, Walking, Boating and Smoke-sensitive people, with “good until ~X”.
+- **Air quality made simple** — leads with a plain category, then AQHI / US AQI / PM2.5, a worsening/stable/improving trend, and an hourly color timeline so you can pick *when* to go out.
+- **Nearby Fire Concern** — Low / Elevated / High / Critical, driven by a fire's **size**, **stage of control**, **distance** and whether **wind** is carrying conditions toward you (bearing vs. wind direction).
+- **Saved Places** — 🏠 Home, 🏕 Cabin, 👵 Parents… each showing its own live status, stored in your browser (localStorage). Plus “use my current location” (only after you allow it).
+- **Map** (secondary tab) — active fires, perimeters, evacuation polygons and your location, with a clean info card per fire.
+- **Forecast** tab — 7-day weather, smoke/air outlook and a dryness-driven fire-weather outlook.
+- **Learn** tab — what AQHI/AQI/PM2.5 mean, how fire-weather works, and the disclaimer + official links.
+- **Installable PWA** — add to your home screen; opens full-screen like a native app.
 
-## Install it on your phone (PWA)
+## Architecture
 
-EmberWatch is a Progressive Web App — once it's hosted (e.g. GitHub Pages), it installs to your home screen and opens full-screen like a native app, no App Store needed.
+Single self-contained `index.html` (keeps GitHub Pages publishing to one file), internally organized into clean layers:
 
-- **iPhone / iPad (Safari):** open the site → tap **Share** → **Add to Home Screen**.
-- **Android (Chrome):** open the site → tap the **⬇ Install app** button (or menu → **Install app / Add to Home screen**).
+- **`Data`** — all API access, with an in-memory TTL cache, per-source timestamps, and null-safe normalization.
+- **`Engine`** — pure decision logic: AQHI, air interpretation, fire severity, evacuation point-in-polygon, master status, Now/Tonight/Tomorrow, activities.
+- **`UI`** — render components + tab router + loading/error states.
+- **`Store`** — saved places & selection in localStorage.
 
 ## Data sources (all free, no API keys)
 
 | Layer | Source |
 |-------|--------|
-| Active wildfires & perimeters | [BC Wildfire Service](https://wildfiresituation.nrs.gov.bc.ca/map) open ArcGIS feed (British Columbia) |
-| Weather / rain / heat / storms | [Open-Meteo](https://open-meteo.com) forecast API (Environment Canada models) |
-| Air quality & smoke (PM2.5 / AQI) | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS) |
-| Place search / geocoding | Open-Meteo Geocoding API |
+| Active wildfires & perimeters | [BC Wildfire Service](https://wildfiresituation.nrs.gov.bc.ca/map) open ArcGIS feeds (BC) |
+| Official evacuation orders & alerts | BC **Evacuation Orders and Alerts** ArcGIS feed (BC) |
+| Weather / rain / heat / storms / visibility | [Open-Meteo](https://open-meteo.com) forecast API |
+| Air quality & smoke (AQHI/AQI/PM2.5) | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) |
+| Place search | Open-Meteo Geocoding API |
 | Map tiles | © OpenStreetMap © CARTO |
 
-Everything runs **client-side in the browser** — no server, no API key — which is why it hosts for free on GitHub Pages. (Weather, air quality and search work worldwide; live wildfire data covers British Columbia.)
+Everything runs client-side — no server, no keys. Weather/air/search work anywhere; live wildfire and evacuation data cover British Columbia.
 
-## Project structure
+## Republish an update to GitHub Pages
 
-```
-emberwatch/
-├── index.html            ← the whole app (HTML + CSS + JS)
-├── manifest.webmanifest  ← PWA metadata (name, icons, theme)
-├── sw.js                 ← service worker (installable + offline shell)
-├── icons/                ← app icons (192, 512, maskable, apple-touch, favicon)
-├── LICENSE
-└── README.md
-```
-
-## Run it locally
-
-The PWA features (install / offline) need to be served over http(s), not opened as a `file://`:
-
-```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000
-```
-
-(You can also just double-click `index.html` to see the dashboard — install/offline just won't be active.)
-
-## Publish to GitHub Pages
-
-1. Create a new repository on GitHub (e.g. `emberwatch`).
-2. Push these files:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit: EmberWatch"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/emberwatch.git
-   git push -u origin main
-   ```
-3. On GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch**, pick `main` / `/ (root)`, Save.
-4. Your app goes live at `https://<your-username>.github.io/emberwatch/` within a minute or two — and is installable from there.
+Replace the files in your repo (drag them into **Add file → Upload files**, or `git push`). Only `index.html` and `sw.js` usually change. Pages redeploys automatically; if you still see the old version it's cache — hard-refresh, or on the installed app close it fully and reopen (the cache version is bumped each release).
 
 ## ⚠️ Disclaimer
 
-EmberWatch is for **general awareness only**. It is **not** an official emergency source. Risk levels are automated estimates and can be wrong or delayed. For evacuation orders and alerts, always check [EmergencyInfoBC](https://www.emergencyinfobc.gov.bc.ca/), your local government, and the [BC Wildfire Service](https://wildfiresituation.nrs.gov.bc.ca/map). In an emergency call **911**. Report a wildfire: **1-800-663-5555** or **\*5555** from a cell.
+EmberWatch combines publicly available environmental and wildfire information to help you understand conditions around your location. It is **not** an emergency service and does not replace official evacuation notices or information from BC Wildfire Service, EmergencyInfoBC, Environment and Climate Change Canada, or local authorities. Conditions can change rapidly. In an emergency call **911**.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Data remains subject to the terms of its respective providers (BC Wildfire Service / Province of BC, Open-Meteo, OpenStreetMap, CARTO).
+MIT — see [LICENSE](LICENSE). Data remains subject to the terms of its providers.
