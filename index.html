@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
+<title>EmberWatch — Fire, Smoke, Air & Weather Risk</title>
+<meta name="description" content="Live daily and 7-day risk dashboard: active wildfires, smoke & air quality, lightning & storms, rain, heat and cooling — for anywhere in BC." />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0b0d12" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="EmberWatch" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0d12; --bg2:#0f131b;
+    --panel:rgba(255,255,255,.045); --panel-solid:#141924; --panel-2:rgba(255,255,255,.06);
+    --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.06);
+    --text:#f3f6fa; --muted:#93a1b2; --dim:#6b7887;
+    --ember:#ff6a00; --ember2:#ffb020;
+    --good:#25d366; --low:#7ed957; --mod:#ffcf3f; --high:#ff9f43; --extreme:#ff5252; --hazard:#b06bff;
+    --radius:22px; --radius-sm:16px;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+    --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+    --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+    --fnt:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --disp:'Space Grotesk',var(--fnt);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--fnt); color:var(--text); line-height:1.5; letter-spacing:.005em;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, rgba(255,106,0,.16), transparent 60%),
+      radial-gradient(900px 500px at -10% 0%, rgba(80,120,255,.10), transparent 55%),
+      var(--bg);
+    background-attachment:fixed; min-height:100dvh;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    padding-left:var(--sal); padding-right:var(--sar);
+  }
+  a{color:var(--ember2);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 16px 40px}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:1100;margin:0 -16px 0;padding:calc(10px + var(--sat)) 16px 10px;
+    background:linear-gradient(180deg, rgba(11,13,18,.92), rgba(11,13,18,.55) 70%, transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    display:flex;align-items:center;gap:12px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand .logo{width:40px;height:40px;border-radius:12px;flex:0 0 auto;object-fit:cover;
+    box-shadow:0 4px 14px rgba(255,106,0,.35)}
+  .brand h1{font-family:var(--disp);font-size:21px;font-weight:700;margin:0;line-height:1;letter-spacing:.01em}
+  .brand .tag{color:var(--muted);font-size:11.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;white-space:nowrap}
+  .live .dotlive{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 8px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+  #install{display:none}
+
+  /* ---------- location + controls ---------- */
+  .hero-loc{padding:16px 4px 4px}
+  .hero-loc .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .hero-loc .name{font-family:var(--disp);font-size:32px;font-weight:700;line-height:1.05;margin-top:4px}
+  .hero-loc .coords{color:var(--muted);font-size:13.5px;margin-top:4px}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 2px 8px}
+  .search{position:relative;flex:1 1 280px;min-width:0}
+  .search input{width:100%;padding:15px 16px;border-radius:14px;border:1px solid var(--line);
+    background:var(--panel-solid);color:var(--text);font-size:16px;font-family:var(--fnt);outline:none;transition:border-color .15s}
+  .search input::placeholder{color:var(--dim)}
+  .search input:focus{border-color:var(--ember)}
+  .results{position:absolute;z-index:1200;left:0;right:0;top:56px;background:var(--panel-solid);
+    border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:none}
+  .results div{padding:13px 16px;cursor:pointer;font-size:15px;border-bottom:1px solid var(--line-2)}
+  .results div:last-child{border-bottom:0} .results div:active,.results div:hover{background:var(--panel-2)}
+  .btn{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel-solid);
+    color:var(--text);font-size:14.5px;font-weight:600;font-family:var(--fnt);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,transform .05s}
+  .btn:hover{border-color:var(--ember)} .btn:active{transform:scale(.97)}
+  select.btn{appearance:none;-webkit-appearance:none;padding-right:16px}
+  .btn.primary{background:linear-gradient(135deg,var(--ember),var(--ember2));border:0;color:#1a0e00}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid;grid-template-columns:1fr;gap:18px;margin-top:8px}
+  @media(min-width:940px){.layout{grid-template-columns:1.05fr 1.25fr;align-items:start}}
+
+  #map{height:340px;width:100%;border-radius:var(--radius);border:1px solid var(--line);z-index:1}
+  @media(min-width:940px){#map{height:520px}}
+  .maphint{color:var(--muted);font-size:12.5px;margin:9px 4px 0;line-height:1.45}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 4px 0;color:var(--muted);font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sq{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+  /* ---------- overall hero ---------- */
+  .overall{border-radius:var(--radius);padding:22px 22px;border:1px solid var(--line);
+    background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:var(--shadow);position:relative;overflow:hidden;animation:rise .5s ease both}
+  .overall .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .overall .lvl{font-family:var(--disp);font-size:46px;font-weight:700;margin-top:4px;line-height:1;letter-spacing:.01em}
+  .overall .desc{font-size:15.5px;margin-top:10px;color:var(--text);opacity:.94;max-width:52ch}
+
+  /* ---------- cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:16px}
+  @media(max-width:600px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:rise .5s ease both}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent,transparent);opacity:.9}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .card .top{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .card .ico{font-size:24px}
+  .card .title{font-weight:700;font-size:16px;font-family:var(--disp)}
+  .badge{margin-left:auto;font-size:12.5px;font-weight:800;padding:6px 12px;border-radius:999px;
+    color:#0a0f16;letter-spacing:.01em;white-space:nowrap}
+  .card .metric{font-family:var(--disp);font-size:38px;font-weight:700;line-height:1.02;letter-spacing:.005em}
+  .card .metric small{font-size:15px;font-weight:500;color:var(--muted);font-family:var(--fnt)}
+  .card .note{font-size:14px;color:var(--muted);margin-top:10px;line-height:1.5;min-height:38px}
+  .card ul{margin:12px 0 0;padding:0;list-style:none}
+  .card li{font-size:13.5px;padding:9px 0;border-top:1px solid var(--line-2);display:flex;gap:9px;align-items:flex-start}
+  .card li:first-child{border-top:0}
+  .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+
+  /* ---------- sections & strips ---------- */
+  .section-h{margin:30px 4px 14px;font-family:var(--disp);font-size:19px;font-weight:700;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .section-h small{color:var(--muted);font-weight:400;font-size:13px;font-family:var(--fnt)}
+  .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+  @media(max-width:900px){.strip{grid-auto-flow:column;grid-auto-columns:132px;grid-template-columns:none;
+    overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    margin:0 -16px;padding-left:16px;padding-right:16px}}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:15px 12px;
+    text-align:center;scroll-snap-align:start;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .day .dow{font-weight:700;font-size:14.5px;font-family:var(--disp)}
+  .day .date{color:var(--dim);font-size:11.5px;margin-bottom:6px}
+  .day .wx{font-size:32px;margin:4px 0}
+  .day .temps{font-size:18px;font-weight:700;font-family:var(--disp)}
+  .day .temps .lo{color:var(--muted);font-weight:500}
+  .day .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:7px;gap:4px}
+  .chip{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:8px;color:#0a0f16;margin-top:7px}
+
+  /* ---------- footer ---------- */
+  footer{margin:34px 4px calc(20px + var(--sab));color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:18px;line-height:1.6}
+  footer a{color:var(--muted);text-decoration:underline}
+  .disclaimer{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:14px;color:var(--text);opacity:.92}
+
+  /* ---------- misc ---------- */
+  .loading{opacity:.45;transition:opacity .2s}
+  .err{color:var(--extreme);font-size:12.5px;margin-top:6px}
+  .leaflet-popup-content{font-size:13.5px;line-height:1.5}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel-solid);color:var(--text)}
+  .leaflet-popup-content a{color:var(--ember2)}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--muted);border-top-color:transparent;
+    border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* iOS install tip */
+  .iostip{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--sab));z-index:2000;display:none;
+    background:var(--panel-solid);border:1px solid var(--line);border-radius:16px;padding:14px 16px;
+    box-shadow:var(--shadow);font-size:14px;align-items:center;gap:12px}
+  .iostip b{color:var(--ember2)}
+  .iostip .x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <img class="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAbk0lEQVR42u2d+48l113gP99z6ta9/Z5+zIynx/aY2OMnmCjhKSTiwEZZAjIEFhCRYFfKb/zCD6sFrbQrIbTsD/ll/wIiwUorQSQUsgksu5FQEgsSxThRzCvYs57Y87Ld090zPd19H1Xnyw/nnKpTdW97evoxY5u5UunWrTpVder7fp4r3NnHAAKU4Xdn+YEHP8iIn8SYHxJ4BnQVWArj3mcf3QS5oir/pKIvGuWFtTV9ES7tJvABcPu9o9zBOBMBv7x87kmx5a+AeR7VZ0Sk54coqsr7+SMiFUgUHaK8gvJF4HNra6//bThpAxL0KBBgIkaXHnj4aVPw24j+qjGmp1oBPD7M3CFi35NskGxWRBAxOFeWwBdc6T6zvn756wkiyne6mb3NwyIm85VTD/8Xo/yBMfKjqpqpatFCUhRPwvv7I4lEAHCqrgTJRMxTIvz7mbkTy52MbwwGg50AQz0IB1igXFlZfRxjP2swP+FUAS3Cufc7oA/yKQBrjBXFvewK9+nr1y998504YS8OyIByefnsc8Z2viDwTKB4uQ/82xspqloIckaM/OpUb+713d2b3wkwdftBgAXKkyfP/rKx9o9Bl1W1BMnuA/5OEKElMGWM+aXpqYWNnZ0bfzNJHNlJCnd5+exzGPMnwKyqun3oivufPY0XVTF8Yqo3/0rghAYSpH3ByZMPPqbICyKcDsA392F5qI8TEVR16Er9aLCQKssyNRvl3LlzPVX+SEROe7FzH/hHwQmqqiLSM5n5n3Nzq8sp8acIKLd3y98Wa35c1RX3xc6RfqyqFkbksbwnnwnUL6mHqysrq+cR+xKiU+i/Cnv+XnxKERF1PLe29sbXABstG2eM+c+IzKi7L3qO14sTg7jfBT4GqACsrJw9L8J3QLr/CkIJ7walbJzTj6ytXfpqBmCM/JqI9Jxz5X3Zf/wIADEi+uvAVzOgo6q/cJ/y76pCBvRnVlfnls3y8gM/iA81cF/23yU1gKqIXR2N5j9iwHxExOTcQRLh/ucoxBCiynOZMfJDwTN+j2RS9PYE9t7gAkTkhzPgmSQU8R4E+O3GvysRYlRBRJ/KgNWgFO4dMUwEnB4gjaGTj8mka+SACD46wlKVhQx06d6SSgv5egxckUpYSQ/KPefud0GMX+8IptIa3ASj3P42mt7o3iMhezcCfRIYJ4EpFijUhRgaajOovptPlQlMpMnN7z4yMtF7BPwxBOg4CKT+LS1kFAqLHUfHwJt9Q0fG7eh4e9UasToJpZpyxN1FRHavqT4CpQq/ShMEJgWZNAk2EyUTHzuxkb7DmJhJUkCl5inRqHUit8g9FU3ZvQZ+BKyQbtqg/PQ8JqSTSmEh1yqenpnAAepDjCZQvkaLIwBbpW0g6bhouotIyI7PDEuksLZfRhPgSwPoJiYjxG8Gqa6MydSOUbaGht94bBcF/uuL8yx0HCOVhl2lQSypBgSo4sKTIzIURcL8tI4U1OzSIAV9L3GAG1d2LaqPvw3qK7ukpvb4O56rEQJDB9+/OOI3zu8A8McXpri6Y+gZrbjAAS5wgIubeA/IH0+QIR45MkktHbOSNHdD8qQiRyrAeorOUKyAFU8NHYFcIDf+u2uga6FnoScwkwHO8OkndujlSi9XPv3EDuoMM5kf07X+utyG+xh/347gdYbxz7MR8QnyTVMgjRHQe4ADxuW9JAqyrunzgI+IMAEwBg8kE5BiJTkvMHLCDywVfPKRXWJx5Ccf2eXzr01zedsykymleuovFUqp912wnozWXFHiOcJFD0NSu1aOXS+YuwF8GsBXTLBeMqBjoGM91eYCPeO3KRs3qbaZTDAYnj/XZ7qnuBJcCdM95flzfQyG2UyYtnGD6XCvXrh/N3BVx3jFXXOENvSPafsjx8QJ2d2i/PhCNmDdRnEQvjMJQJF0k4ozskB4Z6dLPvbgLoxAbMDqSPnYg7t86eI0AyfkBkoHJUKhUKpSOCjEc8DI1bX2BZ4jSjy3SFDUTqL416apesSckB2XzE/telNRfi1SMlPL5I6E3wY6Ig2E2GR/e2T5qdVtHpgrcQMwXQMCrl/ywFzJR88O+H+vzzDdKRk6L3oKhcIJhYHCwch57hup30zpESPqtzKx2t4ZCe8qM1Sj8KzMNUEhmJgWRUTJRLCiAeBCB/UK0niqjcjomIQbjJDhuSAX5eMP7yTdCKbGuoOPP7TDN69NY03NBYUqhfFUP4qcpX6zJYyMIgjiNFidUkViBam4QlNTVAXEHQkmsqMBftvM1ED5WlN+4rl2AjDzAOhoqUTrp+IE4yeYW9gpDB9Z3eGRhRFaesrl9BQomAs3UQOPLIx4bnWXr12dZi5zDB2U6sXQ0HkxNDQwLKlEoREQ5+coJlXASqmKqThBEybXxEQ9HBKyo/b1BK2UWHxBS03R0STsWvHKUKBr/H5uILdSmYw2HCud4dH5gl987CYaqT8TeHjOP/R7W6CKOvjkYze5sp3z1m7GbOYYOS96chFGBjoucIEDq4oVwUhAgAtb6n6F0IcLvsJRW0HZ0VB/E/hVC4loJe8ryje1tdO13irJLXRF6NrgB5ioEwRBsAY+9cQmM7lDSy8uWO7CbO4fvNRFrvdREWZyx6ee2OQPXl6hxJAb9dSvAegiwedQjAi29FRu0nJAV79eIV7kRIfNiyNpOWoHR4o5OuA3b1qJnsQJisDuWQnmpjcvpy1MR7MzIxwTuiJ0EH7liQ0eXBjiChAJRvzKVPDoxO87f84V8ODCkF9+YoNMhFyE6SyastTPymA6PL9nPRdW4s80HbY6TLJXRFffDVaQNuxna6KnW1N+1whdgano3RoJ31EP1EDwMSDh5x9f5+mTu7iRh7UXP8Cp6TradmoaXtnw+kDAjeDpk7v8O9b5s1eWIPV+xXOmwZu4UspYGFpVfYuFC48IzpkLzoybmC09GCdkR0b9ieiJHm5q20cFW4cWjOeCKmzgqTU3EdDC8+fXeWolAb4Ew32xC/O5tzFF/f5CFzYGkIVoaUCCyDpfeGUJY5RMpRFjkqqR1ASrJkmQlt4v0IiIoJ+lMpSOxjQ9oBmqDbUruECvWoUNMmqHKpda3vesV8A9o5Uo6lrxCLKKYLDAz55f58kU+GmM76G5EG/Ogtta+GPXB7UYDJzw1MouwjpfenUJJ9CzDlNGJ04b1O9UQ/QUXAhvq/MK2Af3GsZoK3h3sGhpdljq98LXH6+tHsWYYOuHoFhHxCvbEGroBurPTQS+YBC6VvmF89d5eGHQBH7szz+Rw9lZGJWQ9/yJ4cAfu3gTtoZV3Doi4cnlXaazNT7/yjLD0tC16hW5SJVj1hg9VSiNVDGiEnASEGPEI6SCd0L6ulf1xTHHgkzL85Vg0mVIZdF0YlQzMTm9GRqBH8xOgZ97dJ2HTwxwRYvyg1jg8UUfPCoKmDkJMyt+v2P9uVYzqBFwBTx8YsDPPbpeedYxLuT1jtdF0TTuJh55x4A1UrWGGqGlkO9qME4n5l1S2W+haXq2gN6JesDUCMpFcGr4N+c2+cBSHzdsAd8AQ+DcHJyZ8W4tDhbO+g3nj52Z8WOGzTczAm4IH1jq89PnNnFqgr8hQTx6iytyYhXGtlTOYAxfS5qnFiam/o+XAyZEOhuUITXw/bdUVlAEfseYKhqZW6FwhieXdnj29LYXO6aVWBsGxfv9yz6ujEKWw/Sy37LcHyvVj1ns+msSJBrjxdGzp7d5cmmHojSe86KZbKX2xgNX5klgsLKgkhzCmMDRY+eAFvFLavd78eMnKs24jninqhtMzU7FHZ61u1b5kTO3mhUiqdzvWfjQKQ8Bp14zdqYhn/JbZzpoS/VjPnTKX1M2IRQJ9ofP3KJrNeSSpZpjbqWKTVXxqugTxMhsO0ctd1UEjTteaTI9ih+bhJDzsTCzJEjxkcrzi7ucmhmiZY3U2rwLAJ3NfUzBSEgCLIHt+m16yR8z4sfM5v4akSbHim+fPj0z5LHFXUonzYhsiD/laVQWqfMGUvt+tIoIDiqGjKhPSt/xFpLZJuybNNYfSu48wLXyhD3g63MGf+7Zk9uTSzdHwKPz3tEaFgl2FE48VI898VD90iJ+7Klpf+2Iifd+9uS2d/hCuMSKn1s1V1FPPKLhfcL7qc8rW8K7J7CoN/YNR3NwBawNKoj2v2knVYzU+gBCSNpziKphZarg9OwQ2tTv8C7zIwve5IxKpiygtwCL57x54wq/31vw56IiGpX+2inTqNiSINYemB2y3Ctwzvi5BX3VTAjF+Qsm9aQTMXTPUpKp6IleqgitjFcdy/eWhH+RmJhxKnzfiV2yTFFt3bwAzs37oI1LQgVawplnIesGF9X5/TPPhuUZAlic+mvPzft7paU/CjZTvu/ELk6lzjubJFiXADxLrDuRJvAn9/Pq3VHCjQInqQEfqx7SdKKneqnOC5Ab5dyJwbgrr6E8YnXWWzbxrcsRzK/CynkoRj6AL8bvr5z358pRMl79PTrSdt5B4dyJPrmpy2QsCQIipyZyPxKOtMIv9ywpn1atpSs22SSV6I8HFqaugnAqzHVLVnqj2plOLZ/FLsx0gtmZYHn1gxOoLOyvfrDOaIG/dqbj75UwRww5r/QK5rolqqZRKmPaxBQBn7yrtKhfDmiKmjul9Lb9X4kg9cQYqTtOOIqcRnGVgFPDYq8g77jxqloHnJzyN4mAL0Zw4hGYP1NTeSrYy5E/d+KRwB3hWiv+XhOekXccS1OFt16T2iAbsmMSzGQTKvSqdzCTRI/efQ5o3Mg01/Kq98PEEQ/8AE9VmMvL8anHlecWekH2J6+58oHbT6QxJvgNC726UrcFrrlOiaqfG0k5ZMxpNN5Hxqu0J/84lmiojns0eyjmKBzrLJNUnEGCqNlOEdrVWiycGy864gnnIOtB74S390Ume4Wu9GOyHiF74+8x0/H3LFyz1kpgJsyhAnTqXEpSQilaJWZEmxZxXWWt94YD4qTasaFqXyawrEwItqUI6EgdbdQSunO1x7snjQQPuTtXW0SqdZ5TJzlCLapuqRaZNOYIc8LmKICvrXD4O9nIKSIKJ80XivfIrdfkLuGAqQWwHXindUlV/ZipBX+NBH1iQ2RNGes/iHOYFGK5k4jAPdMBk4rFVPfXzbszspP9u8yMY7A7tz/SkzC2fSwzE5+1U9h9upzH8zkSERQrBtLZaqtkyNFEjgD90kxu6y3cuN2eT+9/Qvn0uF9RuHEEKvQL05DeaY499g+0c1CT9w8mmA5UFxSVUNsW1pY40LSnUeu6Gg0lK5t9S+mCtZly0bD0ZW3moJJXmiRWOn/PlpgsHWz2LUY0aZbVyhJudNC2CcLRiN7KveQAl0zQ0Vzb1zdIaNUo4RuUPQJuDDI2+h1fgdDmgCIq4EMgIConXyDaPGxgo9/hxiDDip9T3FxIUo7NX+XIF9Qw4+B6h02avzWZZlxHWvHVyDGJXbpQf6/O51vDcRFlWApvbueNrqBY7cywJTLK/v7fKh0r+HuNtKGjEHhzO2foiz8DkEP3jDqcC/MPBFNqeFdVnEvRo5G9uSNYhs0cVOZXHJpQfkxqK1A69SXf4XgZuUPrCgNBubAxVeezUwRsDWrZpEB/a/8T7G/Vk7Ti75UgIObTX92YQoL4ITR1OOpmjlLrLW11qjljgoKWYxNBbce71RAXtsaENVYoh+NOKV09LrPKpa2cKze7SNayMN/eTR5tYLjtTcvbykPnx4qZeC9VvwbwlZtdrmzlZMZzaQ1sredbddp4YopJN20bGWMpGbk7OiA+1CWys8S/TBGBH6qM44u4oBNrKhO+dW0uLUr2seu3duDWqHZP+1tQDt/ZSBfxY/pbdXj21sjfK0usGwffenOOUqUSiyU1AnxfgVJojRjn/JiqfCWVAvfEDG3FVVwgPudq9h0lHFA4pcB/R8oqnNIxju/d7HJxcwqJoX8D7Dq4css7UWJguAWDm2Ay9lwVxWR+zHDLX2ONv8eub4lxgfq/tznFxRtdOsZRaD3vaq7p5saRo/v0dY4HAa3G8lQmlmFipSZAD/sjjcaNr9OPSHCBl1+6NouLQbHIBZdvhWyY8bGd6695wOpeHqHxY1zhrxmV/h5ZHVR1Krz05iyCNmS8n6MLXTS1IRbnW1A3+2mb8g+xwsGdWUFN1ytRxLUVURIB7EXPSJWRU2+IOPWICC9WBja3RrmylfPtazO1LrDAjZGn4MyAWFh/bVy+t/XE+mt+bBao/8YIbC37v31thktbOdZo3T+GVgQySubsCSgVoaG/WP2W2ICJJcRxW0HaUGipNVRZO+oaVD8KgB4GrhiqqxERLMTMOL5xeZ4rN/KAhJCiunADBiVkHRhswcZFXweUamwNdUIbF/2YrOOvuXAjAF+84r2R843L83SMf34EflH6ecW+MU8wWjX0RW52qpWldFQhiqMLRSQsWmjNwsPghA6dMnIwcDAqlVEZX85TWlTeX764yPbQevPQADdH8N1177OLhbVXoBiMJ2SKgT8n1o/97jrcHKHGh5K3h5YvX1ysTc0I9CByRk4ZqDIstXIbhqlOoDara6dSxnPZx48AaegBbVkGkROKIIoK9S85LGHglIHznBDF0lDrMSKOjb7lLy8sUsSHdMQX3V7bhl4Xtt6GtVcDF8SkfO6Pbb3tx1zb9td0/D0KhP97YZHNvkVMADC+fWlUwlD9vEalJ5BILCPVSlw6V+uso1LAhJAMB9pIHWOpRGDVoR4VWXihodaUP3QeGcPw0sMyjCu9KLp4o8tXLi4gNgl1v7wG/QI6OVz9TtAF1m/DbX+sk/sxL6/ViR4LX7m4wGs3uljjGBRKWdbAHjgYlFrtD6stiKbwLpXBUAUFPPU34SF3DEc7NzX9u4fOCbRq9Jp1MzEbJvUxkWbOIJaJ+yVN6Vjl8lYXAzy0OPDW0cDBbgEPLUD/lh+8+JC3di5/GzZfh24PvvUWrA9wVjCZ8vU35vjm1Tm6me8dLisOjOLR0Y9IKJVB6dVHRMYoWnLBFFWdIH4OseLWATtkJM3FNcWRxo7zugvd11UpUgZAO+ezrlUTtL+nC4Evp0JmS164NEeeOT60uo1DMJe2YWEdHj8Bb/4jnHrSP/zNf4CpKfjndbi0jcs98F+6MsMLl+bIbMkg6hwIusjL+wj8voN+BLxGEcSYV+xoLX12yOXO7NzU1G8BUxyo0UbHskjSMoxjwzbVOgzSWD9CW/Wbmi7XI/DqRo+lXsmp+ZHvw3l7FxZ7MGNgdwtuXoPRBqwN4dtv4zLB5Mo/vDXF/7mwgDFa66FgiUV91Hc1xfed0tfwW5WRk0oHlMEj1iTkUFP/YRKUgp2bmvoPAisHRuOEgLjsobelFd6PPkRMqblEpZThIhHlu9d7TGeO1YWRzzS+tQurc+Buec93AHzjGs4pJoeXrk7z5xcWQLSi+GGw7QeV7K+pftc5BkE3DVUZltGEDs5aFUSUPYJvclA5sm3ner2fEmOeol5m7WCJjxY7jotHSTJNTaxpED+RwnxnolY1WSrw92s9X0m3PML1Fd7eRR6cAyPo31xFdwpMF/76jRm+dGEekeB7BGtmmCrdAPyBU/pBAQ9dfX5YOYqp6JGxjNkhgO/E/ynl39n5Xu9RMean9TCCTCYntBuFGtISUJIsHUYdTneVspPg2PlvI8rfr/UoSuHx00PYdr4f7K0deHuAmYG/eHWOv3xtlsx6R8vL+dq07GtUsLXsH2hqlUXbv1a8dfSzRf2Hk/3OiJgSvmhnZ2dF4Nc58B83yB6iSJpI0XoFw2rNi/BSTkMnYgLwMmSgooNWOjBG+e56zlbf8MyZIXKrQG6NkC587h/n+Ks3psmtq8RMRIKX8dEP8bG5uD9IgD8p9uMNA2mEoI9gnVEREVGR/2HnFhbWGI1+SYw5SfLvPgdGQmuCMjGRXb9Q3QYqwdaOGbQIfAnetVA4xRjlnzZyLm9lPHt6CFb47MvzfPXyNLktA0CFoWuLFq2U7dB5TvAOWJ0wG6mGEHpt9+8N/AMjQIOR+Pao3/+d7OrVqzurS0tfFORpv9zFQcMTTdM0Vkm4yiOqS9DVKWoEF5qhy5hBM8JI/UoqQ6ehNt8vqGGN8yWDzjtrX7vSZXO4QMcqL73ZZT4vuVVER9DhVCo5Hqm6jvXU3nc8XqBhkScqAnDtiOfRrLDrRMSo6pfXdnauCsDZEyd+UK15MTSByMEcbUnyozUyYn1otd6CSdqYQu+V78fSpEFCqt/puKrIN5T59AtPnVOZVpUsrgJgkhhSpVBhFDJyI7ReyEmba8w1xY4mSleShTkOuoSlAOoMYlT1E5c3Nv4ilkS61cXFPzVGPun8P+gd4o98dCxG3mjmYLz8u+ohIO1KlGq9CdsoEZeKRU3Si1HFoQLQGlm3qFiDgo/5iJJxJ6uRcoQj8XabyhfjHN+8srHxE0BRecJq7e+rK39W6vVR5XBKOXkTmVDCEhwumwxz4kVSIX4RPauee6qmjkbBb2vx7mQRDdcIjbdWUdQa+G4C4Nu0JIe09SfeUd3v4bvXbAS2vbWzc3m+N3XKWPmxkIM+fKhabv9b21UG6ZKSSTVFkaY3qWV5Gl6ojrXSiqNGWDlFzjjV772O96ERUBoRq6p/dmVj8/ei5Gm0On1gcXFugP61GPO0HloUTRBHLT+hCtpp3bgRZbyZ8LsamyTBSHwITUIZmgA3/dZW+Uw73zc5vn9o4Dv/F4b6loMfubqx8UZiETXg4R5eWPiws+YrCNOhzsocCefRLAtMX62xSavRI20NShpmUrCkwKsQQBPIkbv2AvwxyPtGzYKIWId7/sr1zf9N8hfntjXQ3hgMLs/2pv6/iPziJAPs4LJI9hRJY9lmSYDZKvpyNC2WRv1OqMwoJ4gYtxfFtydwDMA3ItY5/Y9X1jf/kNb/y9sJF2Rb/f535qa6myLyCaoOib3KEQ7grInukWHT8co7muLFtSrU3KStUeM5GehaWdtJEEaOqvVCgospGMGW8N+vrG/8fhv47CHjHWC3dvtfn+/2XhXh34rQJYT3j2yCsrebOAkJewOyWSbY3h8br3vRxpGuhugNOREB958uX9/8b5OAf7unWqBcXVz8cSP6WRF50mm1aOQR/+HnHklWGZ+k7E/bNH/fHaBXVrYRMQ69rPCbV65vfmEv4HMbQCpgt/r916fm7eekMEti5MNGxGhdh3VEf/ws++79T1LQkzljP605Rwv8qkhCRIyIiCqfH5X6a9c2bnz9nYC/31lUNzi7vPBRg/yOIh+vAg++68JxtAtJcef/LbafNzxyoHvrWKow+wsO/UywdLgd8O9kRpFuXEQEKp9C+RkxcrY24+7GXzLp5FJAPTaxMimWnNqubwnyZaf8r8sbG38ODdPd3RF97JMbqiDhmdnZFZPbn0T5qBj5sCpPASd4f3+2gFcEfRGRrwr2r964fv3KJImxn8+/ABWO/EeuKbD0AAAAAElFTkSuQmCC" alt="EmberWatch" />
+      <div>
+        <h1>EmberWatch</h1>
+        <div class="tag">Fire · Smoke · Air · Weather — live &amp; 7-day</div>
+      </div>
+    </div>
+    <button class="btn primary" id="install">⬇ Install app</button>
+    <div class="live"><span class="dotlive"></span><span id="updated">Loading…</span></div>
+  </div>
+
+  <div class="hero-loc">
+    <div class="eyebrow">Your location</div>
+    <div class="name" id="locName">Salmon Arm</div>
+    <div class="coords" id="locCoords"></div>
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <input id="search" type="text" autocomplete="off" placeholder="Search a place (e.g. Salmon Arm, Kelowna, Prince George)…" />
+      <div class="results" id="results"></div>
+    </div>
+    <button class="btn" id="geo">📍 My location</button>
+    <select class="btn" id="preset" title="Jump to a community"></select>
+    <button class="btn" id="refresh">↻ Refresh</button>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div id="map"></div>
+      <div class="maphint">Tap anywhere on the map to set your location. Fire icons show active wildfires; shaded areas are fire perimeters.</div>
+      <div class="legend">
+        <span><span class="sq" style="background:var(--good)"></span>Low</span>
+        <span><span class="sq" style="background:var(--mod)"></span>Moderate</span>
+        <span><span class="sq" style="background:var(--high)"></span>High</span>
+        <span><span class="sq" style="background:var(--extreme)"></span>Very High / Extreme</span>
+        <span><span class="sq" style="background:var(--hazard)"></span>Hazardous air</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="overall" id="overall">
+        <div class="lbl">Today's overall risk</div>
+        <div class="lvl"><span class="spin"></span>Loading…</div>
+        <div class="desc">Pulling live data for your location…</div>
+      </div>
+
+      <div class="cards">
+        <div class="card" id="card-fire">
+          <div class="top"><span class="ico">🔥</span><span class="title">Wildfire</span><span class="badge" style="background:var(--muted)">—</span></div>
+          <div class="metric" id="fire-metric">—</div>
+          <div class="note" id="fire-note">Loading nearby active fires…</div>
+          <ul id="fire-list"></ul>
+        </div>
+
+        <div class="card" id="card-smoke">
+          <div class="top"><span class="ico">🌫️</span><span class="title">Smoke &amp; Air Quality</span><span class="badge" style="background:var(--muted)">—</span></div>
+          <div class="metric" id="smoke-metric">—</div>
+          <div class="note" id="smoke-note">Loading air quality…</div>
+        </div>
+
+        <div class="card" id="card-storm">
+          <div class="top"><span class="ico">⛈️</span><span class="title">Lightning &amp; Storms</span><span class="badge" style="background:var(--muted)">—</span></div>
+          <div class="metric" id="storm-metric">—</div>
+          <div class="note" id="storm-note">Loading storm outlook…</div>
+        </div>
+
+        <div class="card" id="card-weather">
+          <div class="top"><span class="ico">🌡️</span><span class="title">Rain, Heat &amp; Cooling</span><span class="badge" style="background:var(--muted)">—</span></div>
+          <div class="metric" id="weather-metric">—</div>
+          <div class="note" id="weather-note">Loading weather…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-h">📅 7-Day Outlook <small>weather · air quality · storm risk</small></div>
+  <div class="strip" id="forecast"></div>
+
+  <div class="section-h">🔥 Fire-Weather Outlook <small>how weather is loading (or easing) fire danger each day</small></div>
+  <div class="strip" id="firewx"></div>
+
+  <footer>
+    <div>
+      <strong>Data sources:</strong>
+      Active wildfires &amp; perimeters from the
+      <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">BC Wildfire Service</a>
+      open data feed ·
+      Weather, air quality &amp; smoke from
+      <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+      (Environment Canada &amp; CAMS models) ·
+      Place search by Open-Meteo · Map tiles © OpenStreetMap contributors.
+    </div>
+    <div class="disclaimer">
+      ⚠️ <strong>EmberWatch is for general awareness only.</strong> It is not an official emergency source.
+      Risk levels are automated estimates and can be wrong or delayed. Wildfire data covers British Columbia.
+      For evacuation orders and alerts always check
+      <a href="https://www.emergencyinfobc.gov.bc.ca/" target="_blank" rel="noopener">EmergencyInfoBC</a>,
+      your local government, and
+      <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">BC Wildfire Service</a>.
+      In an emergency call 911. Report a wildfire: 1-800-663-5555 or *5555 from a cell.
+    </div>
+  </footer>
+</div>
+
+<div class="iostip" id="iostip">
+  <span>📲 Install EmberWatch: tap <b>Share</b> then <b>Add to Home Screen</b>.</span>
+  <span class="x" id="iostipx">×</span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ============================================================
+   EmberWatch — single-file dashboard. No API keys.
+   ============================================================ */
+const TZ = "America/Vancouver";
+
+const COMMUNITIES = [
+  {n:"Salmon Arm",   lat:50.7001, lon:-119.2838},
+  {n:"Sicamous",     lat:50.8369, lon:-118.9856},
+  {n:"Sorrento",     lat:50.8792, lon:-119.4478},
+  {n:"Chase",        lat:50.8186, lon:-119.6869},
+  {n:"Blind Bay",    lat:50.9006, lon:-119.3906},
+  {n:"Scotch Creek", lat:50.9967, lon:-119.4506},
+  {n:"Celista",      lat:51.0206, lon:-119.5497},
+  {n:"Anglemont",    lat:51.0508, lon:-119.4197},
+  {n:"Magna Bay",    lat:51.0231, lon:-119.4839},
+  {n:"Eagle Bay",    lat:50.9411, lon:-119.2200},
+  {n:"Tappen",       lat:50.7622, lon:-119.3517},
+  {n:"Enderby",      lat:50.5506, lon:-119.1397},
+  {n:"Armstrong",    lat:50.4489, lon:-119.1969},
+  {n:"Vernon",       lat:50.2670, lon:-119.2720},
+  {n:"Kelowna",      lat:49.8880, lon:-119.4960},
+  {n:"Kamloops",     lat:50.6745, lon:-120.3273},
+  {n:"Falkland",     lat:50.5006, lon:-119.5836},
+  {n:"Malakwa",      lat:50.9394, lon:-118.8006},
+  {n:"Revelstoke",   lat:50.9981, lon:-118.1957},
+  {n:"Seymour Arm",  lat:51.2400, lon:-118.9500}
+];
+
+function getVar(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+const COLORS = {
+  none:getVar('--good'), low:getVar('--low'), mod:getVar('--mod'), high:getVar('--high'),
+  extreme:getVar('--extreme'), hazard:getVar('--hazard'), muted:getVar('--muted')
+};
+const LEVELS = [
+  {k:0,label:"Low",       col:COLORS.none},
+  {k:1,label:"Moderate",  col:COLORS.mod},
+  {k:2,label:"High",      col:COLORS.high},
+  {k:3,label:"Very High", col:COLORS.extreme},
+  {k:4,label:"Extreme",   col:COLORS.extreme}
+];
+function levelInfo(k){ k=Math.max(0,Math.min(4,Math.round(k))); return LEVELS[k]; }
+
+let state = { lat:50.7001, lon:-119.2838, name:"Salmon Arm" };
+let map, marker, fireLayer, perimLayer;
+
+// ---------------- MAP ----------------
+function initMap(){
+  map = L.map('map',{scrollWheelZoom:true, zoomControl:true}).setView([state.lat,state.lon], 9);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    maxZoom:19, attribution:'© OpenStreetMap © CARTO'
+  }).addTo(map);
+  fireLayer = L.layerGroup().addTo(map);
+  perimLayer = L.layerGroup().addTo(map);
+  marker = L.marker([state.lat,state.lon],{draggable:true}).addTo(map);
+  marker.on('dragend', e=>{ const p=e.target.getLatLng(); setLocation(p.lat,p.lng); });
+  map.on('click', e=> setLocation(e.latlng.lat, e.latlng.lng));
+}
+
+// ---------------- LOCATION ----------------
+function nearestCommunity(lat,lon){
+  let best=null,bd=1e9;
+  for(const c of COMMUNITIES){ const d=haversine(lat,lon,c.lat,c.lon); if(d<bd){bd=d;best=c;} }
+  return {name:best.n, dist:bd};
+}
+function setLocation(lat,lon,name){
+  state.lat=+lat.toFixed(4); state.lon=+lon.toFixed(4);
+  const near=nearestCommunity(lat,lon);
+  state.name = name || (near.dist<3 ? near.name : `Near ${near.name}`);
+  document.getElementById('locName').textContent = state.name;
+  document.getElementById('locCoords').textContent =
+    `${state.lat}°, ${state.lon}°` + (near.dist>=3 ? ` · ${Math.round(near.dist)} km from ${near.name}` : ``);
+  if(marker) marker.setLatLng([state.lat,state.lon]);
+  if(map) map.panTo([state.lat,state.lon]);
+  loadAll();
+}
+
+// ---------------- DATA ----------------
+async function loadAll(){
+  setLoading(true);
+  document.getElementById('updated').innerHTML = `<span class="spin"></span>Updating…`;
+  const results = await Promise.allSettled([ loadWeatherAndAir(), loadFires() ]);
+  computeOverall(results);
+  const t = new Date().toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
+  document.getElementById('updated').textContent = `Updated ${t}`;
+  setLoading(false);
+}
+function setLoading(b){ document.querySelectorAll('.card').forEach(c=>c.classList.toggle('loading',b)); }
+
+let LAST = { weather:null, air:null, fires:null };
+
+async function loadWeatherAndAir(){
+  const {lat,lon}=state;
+  const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+    `&timezone=${encodeURIComponent(TZ)}&forecast_days=7`+
+    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m`+
+    `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,cape`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset`;
+  const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}`+
+    `&timezone=${encodeURIComponent(TZ)}&forecast_days=5`+
+    `&current=us_aqi,pm2_5,pm10,ozone&hourly=us_aqi,pm2_5,pm10`;
+  const [wx, aq] = await Promise.all([ fetchJSON(wUrl), fetchJSON(aUrl) ]);
+  LAST.weather = wx; LAST.air = aq;
+  renderWeatherCard(wx); renderStormCard(wx); renderSmokeCard(aq, wx);
+  renderForecast(wx, aq); renderFireWeather(wx);
+  return {wx, aq};
+}
+
+const FIRE_URL = "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/BCWS_ActiveFires_PublicView/FeatureServer/0/query";
+const PERIM_URL= "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/BCWS_FirePerimeters_PublicView/FeatureServer/0/query";
+
+async function loadFires(){
+  const {lat,lon}=state;
+  const env = { xmin:lon-2.8, ymin:lat-2.0, xmax:lon+2.8, ymax:lat+2.0 };
+  const q = new URLSearchParams({
+    f:"json", where:"1=1", outFields:"*", returnGeometry:"true",
+    outSR:"4326", inSR:"4326", geometryType:"esriGeometryEnvelope",
+    spatialRel:"esriSpatialRelIntersects", geometry: JSON.stringify(env)
+  });
+  let data=null;
+  try{ data = await fetchJSON(`${FIRE_URL}?${q}`); }catch(e){ renderFireError(); throw e; }
+  const feats = (data && data.features) ? data.features : [];
+  const fires = feats.map(f=>{
+    const a=f.attributes||{}, g=f.geometry||{};
+    const flat=(a.LATITUDE!=null)?a.LATITUDE:g.y, flon=(a.LONGITUDE!=null)?a.LONGITUDE:g.x;
+    return {
+      num:a.FIRE_NUMBER||a.FIRE_ID||"?", name:a.INCIDENT_NAME||a.GEOGRAPHIC_DESCRIPTION||"Wildfire",
+      status:(a.FIRE_STATUS||"").trim(), size:(a.CURRENT_SIZE!=null)?a.CURRENT_SIZE:null,
+      cause:a.FIRE_CAUSE||"", geo:a.GEOGRAPHIC_DESCRIPTION||"", url:a.FIRE_URL||"",
+      ofNote:(a.FIRE_OF_NOTE_IND==="Y"), lat:flat, lon:flon,
+      dist:(flat!=null&&flon!=null)?haversine(lat,lon,flat,flon):null
+    };
+  }).filter(x=> x.lat!=null && x.status.toLowerCase()!=="out" && x.status.toLowerCase()!=="fire out");
+  loadPerimeters(env).catch(()=>{});
+  LAST.fires = fires;
+  renderFireMarkers(fires); renderFireCard(fires);
+  return fires;
+}
+async function loadPerimeters(env){
+  const q = new URLSearchParams({
+    f:"geojson", where:"1=1", outFields:"FIRE_NUMBER,FIRE_STATUS,FIRE_SIZE_HECTARES",
+    returnGeometry:"true", outSR:"4326", inSR:"4326",
+    geometryType:"esriGeometryEnvelope", spatialRel:"esriSpatialRelIntersects", geometry: JSON.stringify(env)
+  });
+  const gj = await fetchJSON(`${PERIM_URL}?${q}`);
+  perimLayer.clearLayers();
+  if(gj && gj.features){
+    L.geoJSON(gj,{style:()=>({color:"#ff5252",weight:1,fillColor:"#ff5252",fillOpacity:.20})}).addTo(perimLayer);
+  }
+}
+
+// ---------------- CARDS ----------------
+function setBadge(cardId,label,col){
+  const b=document.querySelector(`#${cardId} .badge`);
+  b.textContent=label; b.style.background=col; b.style.color="#0a0f16";
+  const card=document.getElementById(cardId); if(card) card.style.setProperty('--accent',col);
+}
+function renderFireMarkers(fires){
+  fireLayer.clearLayers();
+  const fireIcon=(ofNote)=>L.divIcon({className:'',html:`<div style="font-size:${ofNote?24:19}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))">🔥</div>`,iconSize:[26,26],iconAnchor:[13,13]});
+  fires.forEach(f=>{
+    const m=L.marker([f.lat,f.lon],{icon:fireIcon(f.ofNote)}).addTo(fireLayer);
+    const size=(f.size!=null)?`${fmtNum(f.size)} ha`:"size n/a";
+    const link=f.url?`<br><a href="${f.url}" target="_blank" rel="noopener">Details ↗</a>`:"";
+    m.bindPopup(`<b>${escapeHTML(f.name)}</b> (${escapeHTML(String(f.num))})<br>${escapeHTML(f.status)} · ${size}`+
+      `<br>${escapeHTML(f.geo)}${f.dist!=null?` · ${Math.round(f.dist)} km away`:""}${link}`);
+  });
+}
+function statusRank(s){ s=(s||"").toLowerCase();
+  if(s.includes("out of control")) return 3;
+  if(s.includes("being held")) return 2;
+  if(s.includes("under control")||s.includes("patrol")) return 1;
+  return 2;
+}
+function renderFireCard(fires){
+  const near = fires.filter(f=>f.dist!=null).sort((a,b)=>a.dist-b.dist);
+  const within50 = near.filter(f=>f.dist<=50);
+  const nearest = near[0];
+  let risk=0, metric, note;
+  if(!nearest){
+    risk=0; metric=`<span style="color:var(--good)">No active fires nearby</span>`;
+    note="No active wildfires within roughly 200 km of this spot right now.";
+  }else{
+    const d=nearest.dist, sr=statusRank(nearest.status), big=(nearest.size||0)>=1000;
+    if(d<=10) risk=4; else if(d<=25) risk=3; else if(d<=50) risk=2; else if(d<=100) risk=1; else risk=0;
+    if(sr>=3) risk+=0.6; if(big) risk+=0.4; if(nearest.ofNote) risk+=0.5;
+    risk=Math.min(4,risk);
+    metric = `${Math.round(nearest.dist)} <small>km to nearest fire</small>`;
+    note = `${within50.length} active fire${within50.length!==1?"s":""} within 50 km. `+
+           `Nearest: ${escapeHTML(nearest.name)} — ${escapeHTML(nearest.status||"active")}`+
+           (nearest.size!=null?`, ${fmtNum(nearest.size)} ha.`:".");
+  }
+  const li = levelInfo(risk);
+  document.getElementById('fire-metric').innerHTML = metric;
+  document.getElementById('fire-note').textContent = note;
+  setBadge('card-fire', nearest?li.label:"None", nearest?li.col:COLORS.none);
+  const list=document.getElementById('fire-list'); list.innerHTML="";
+  near.slice(0,4).forEach(f=>{
+    const col = f.dist<=25?COLORS.extreme : f.dist<=50?COLORS.high : f.dist<=100?COLORS.mod:COLORS.low;
+    const el=document.createElement('li');
+    el.innerHTML=`<span class="dot" style="background:${col}"></span>`+
+      `<span><b>${Math.round(f.dist)} km</b> · ${escapeHTML(f.name)} `+
+      `<span style="color:var(--muted)">(${escapeHTML(f.status||'active')}${f.size!=null?', '+fmtNum(f.size)+' ha':''})</span></span>`;
+    list.appendChild(el);
+  });
+  document.getElementById('card-fire').dataset.risk = risk;
+}
+function renderFireError(){
+  document.getElementById('fire-metric').innerHTML=`<span style="color:var(--extreme)">Unavailable</span>`;
+  document.getElementById('fire-note').innerHTML=`Couldn't reach the BC Wildfire feed. `+
+    `Check the <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">official map ↗</a>.`;
+  setBadge('card-fire',"n/a",COLORS.muted);
+  document.getElementById('card-fire').dataset.risk = -1;
+}
+function aqiCat(aqi){
+  if(aqi==null) return {label:"—",col:COLORS.muted,risk:0,desc:""};
+  if(aqi<=50)  return {label:"Good",col:COLORS.good,risk:0,desc:"Air quality is good."};
+  if(aqi<=100) return {label:"Moderate",col:COLORS.mod,risk:1,desc:"Acceptable; unusually sensitive people should watch symptoms."};
+  if(aqi<=150) return {label:"Unhealthy (sensitive)",col:COLORS.high,risk:2,desc:"Sensitive groups (kids, elderly, heart/lung conditions) should limit exertion outdoors."};
+  if(aqi<=200) return {label:"Unhealthy",col:COLORS.extreme,risk:3,desc:"Everyone may feel effects; reduce prolonged outdoor exertion."};
+  if(aqi<=300) return {label:"Very Unhealthy",col:COLORS.hazard,risk:4,desc:"Health alert — avoid outdoor exertion, keep windows closed."};
+  return {label:"Hazardous",col:COLORS.hazard,risk:4,desc:"Emergency conditions — stay indoors with filtered air if possible."};
+}
+function renderSmokeCard(aq, wx){
+  const cur = aq && aq.current ? aq.current : null;
+  let peak=null, peakPM=null;
+  if(aq && aq.hourly && aq.hourly.us_aqi){
+    const now=Date.now();
+    for(let i=0;i<aq.hourly.time.length;i++){
+      const t=new Date(aq.hourly.time[i]).getTime();
+      if(t>=now-3600e3 && t<=now+24*3600e3){
+        const v=aq.hourly.us_aqi[i]; if(v!=null&&(peak==null||v>peak))peak=v;
+        const p=aq.hourly.pm2_5[i]; if(p!=null&&(peakPM==null||p>peakPM))peakPM=p;
+      }
+    }
+  }
+  const nowAqi = cur? cur.us_aqi : peak;
+  const cat = aqiCat(Math.max(nowAqi||0, peak||0));
+  document.getElementById('smoke-metric').innerHTML = (nowAqi!=null? `${Math.round(nowAqi)} <small>US AQI now</small>`:`—`);
+  let smokeNote = cat.desc;
+  if(peak!=null && peak>(nowAqi||0)+15) smokeNote += ` Peaks near ${Math.round(peak)} in the next 24h.`;
+  if(peakPM!=null) smokeNote += ` PM2.5 up to ${Math.round(peakPM)} µg/m³.`;
+  if(wx && wx.current && wx.current.wind_direction_10m!=null && (peakPM||0)>=20){
+    smokeNote += ` Wind from the ${compass(wx.current.wind_direction_10m)}.`;
+  }
+  document.getElementById('smoke-note').textContent = smokeNote;
+  setBadge('card-smoke', cat.label, cat.col);
+  document.getElementById('card-smoke').dataset.risk = cat.risk;
+}
+function renderStormCard(wx){
+  if(!wx||!wx.hourly){ setBadge('card-storm','n/a',COLORS.muted); return; }
+  const h=wx.hourly, now=Date.now();
+  let stormHrs=0, maxCape=0, maxPop=0, firstStorm=null;
+  for(let i=0;i<h.time.length;i++){
+    const t=new Date(h.time[i]).getTime();
+    if(t< now-3600e3 || t> now+24*3600e3) continue;
+    const wc=h.weather_code?h.weather_code[i]:null;
+    const cape=h.cape?h.cape[i]:0;
+    const pop=h.precipitation_probability?h.precipitation_probability[i]:0;
+    if(cape>maxCape)maxCape=cape; if(pop>maxPop)maxPop=pop;
+    const isStorm = (wc>=95) || (cape>=1000 && pop>=40);
+    if(isStorm){ stormHrs++; if(firstStorm==null) firstStorm=new Date(h.time[i]); }
+  }
+  let risk=0;
+  if(stormHrs>=3 || maxCape>=2000) risk=3;
+  else if(stormHrs>=1 || (maxCape>=1000&&maxPop>=50)) risk=2;
+  else if(maxCape>=600 && maxPop>=40) risk=1; else risk=0;
+  const li=levelInfo(risk);
+  document.getElementById('storm-metric').innerHTML = stormHrs>0
+    ? `${stormHrs}h <small>with storm risk (24h)</small>` : `<span style="color:var(--good)">None expected</span>`;
+  let note;
+  if(risk===0) note=`No thunderstorms signalled in the next 24h. Max instability (CAPE) ${Math.round(maxCape)} J/kg.`;
+  else{
+    const when = firstStorm? firstStorm.toLocaleString('en-CA',{weekday:'short',hour:'numeric',timeZone:TZ}):"soon";
+    note=`Thunderstorm potential from ~${when}. CAPE up to ${Math.round(maxCape)} J/kg, precip chance ${Math.round(maxPop)}%. Lightning can start new fires.`;
+  }
+  document.getElementById('storm-note').textContent = note;
+  setBadge('card-storm', risk===0?"Low":li.label, risk===0?COLORS.good:li.col);
+  document.getElementById('card-storm').dataset.risk = risk;
+}
+function renderWeatherCard(wx){
+  if(!wx||!wx.current||!wx.daily){ setBadge('card-weather','n/a',COLORS.muted); return; }
+  const c=wx.current, d=wx.daily;
+  const hi=d.temperature_2m_max[0], lo=d.temperature_2m_min[0], feels=d.apparent_temperature_max[0];
+  const rain=d.precipitation_sum[0], pop=d.precipitation_probability_max[0];
+  document.getElementById('weather-metric').innerHTML =
+    `${Math.round(c.temperature_2m)}° <small>now · ${Math.round(hi)}° / ${Math.round(lo)}° today</small>`;
+  let risk=0, tags=[];
+  if(feels>=37 || hi>=37){risk=Math.max(risk,4);tags.push("Extreme heat");}
+  else if(feels>=33 || hi>=33){risk=Math.max(risk,3);tags.push("Heat warning range");}
+  else if(hi>=29){risk=Math.max(risk,1);tags.push("Warm");}
+  if(lo<=-15){risk=Math.max(risk,3);tags.push("Extreme cold");}
+  else if(lo<=-5){risk=Math.max(risk,1);tags.push("Cold");}
+  if(rain>=25){risk=Math.max(risk,3);tags.push("Heavy rain");}
+  else if(rain>=10){risk=Math.max(risk,2);tags.push("Rain");}
+  else if(rain>=1){tags.push("Showers");}
+  let note = `${wcodeText(d.weather_code[0])}. `;
+  if(rain>=0.5) note += `${fmtNum(rain)} mm expected (${Math.round(pop||0)}% chance). `;
+  else note += `Little or no rain (${Math.round(pop||0)}% chance). `;
+  note += `Feels-like high ${Math.round(feels)}°. UV index ${Math.round(d.uv_index_max[0]||0)}.`;
+  document.getElementById('weather-note').textContent = note;
+  const li = levelInfo(risk);
+  setBadge('card-weather', tags.length?tags[0]:"Calm", risk===0?COLORS.good:li.col);
+  document.getElementById('card-weather').dataset.risk = risk;
+}
+
+// ---------------- STRIPS ----------------
+function renderForecast(wx, aq){
+  const el=document.getElementById('forecast'); el.innerHTML="";
+  if(!wx||!wx.daily){ el.innerHTML="<div class='err'>Forecast unavailable.</div>"; return; }
+  const d=wx.daily, dayAqi=dailyPeakAqi(aq);
+  for(let i=0;i<d.time.length;i++){
+    const date=new Date(d.time[i]+"T12:00:00");
+    const dow=date.toLocaleDateString('en-CA',{weekday:'short',timeZone:TZ});
+    const dm=date.toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:TZ});
+    const aqi=dayAqi[d.time[i]], cat=aqiCat(aqi);
+    const pop=d.precipitation_probability_max[i], rain=d.precipitation_sum[i], storm=(d.weather_code[i]>=95);
+    const div=document.createElement('div'); div.className='day';
+    div.innerHTML=`
+      <div class="dow">${dow}</div><div class="date">${dm}</div>
+      <div class="wx">${wcodeEmoji(d.weather_code[i])}</div>
+      <div class="temps">${Math.round(d.temperature_2m_max[i])}° <span class="lo">${Math.round(d.temperature_2m_min[i])}°</span></div>
+      <div class="row"><span>💧 ${Math.round(pop||0)}%</span><span>${rain>=0.1?fmtNum(rain)+'mm':'—'}</span></div>
+      <div class="row"><span>💨 ${Math.round(d.wind_gusts_10m_max[i]||0)}</span><span>UV ${Math.round(d.uv_index_max[i]||0)}</span></div>
+      ${aqi!=null?`<span class="chip" style="background:${cat.col}">AQI ${Math.round(aqi)}</span>`:``}
+      ${storm?`<span class="chip" style="background:${COLORS.extreme}">⛈️ Storm</span>`:``}`;
+    el.appendChild(div);
+  }
+}
+function dailyPeakAqi(aq){
+  const out={}; if(!aq||!aq.hourly||!aq.hourly.us_aqi) return out;
+  for(let i=0;i<aq.hourly.time.length;i++){
+    const day=aq.hourly.time[i].slice(0,10), v=aq.hourly.us_aqi[i]; if(v==null)continue;
+    if(out[day]==null||v>out[day]) out[day]=v;
+  } return out;
+}
+function fireWxRisk(tmax, rhmin, windmax, rain){
+  let s=0;
+  if(tmax>=30)s+=2; else if(tmax>=25)s+=1;
+  if(rhmin!=null){ if(rhmin<=25)s+=2; else if(rhmin<=40)s+=1; }
+  if(windmax>=40)s+=2; else if(windmax>=25)s+=1;
+  if(rain>=5)s-=2; else if(rain>=1)s-=1;
+  return Math.max(0,Math.min(4,s));
+}
+function dailyMinRH(wx){
+  const out={}; if(!wx||!wx.hourly||!wx.hourly.relative_humidity_2m) return out;
+  for(let i=0;i<wx.hourly.time.length;i++){
+    const day=wx.hourly.time[i].slice(0,10), v=wx.hourly.relative_humidity_2m[i]; if(v==null)continue;
+    if(out[day]==null||v<out[day]) out[day]=v;
+  } return out;
+}
+function renderFireWeather(wx){
+  const el=document.getElementById('firewx'); el.innerHTML="";
+  if(!wx||!wx.daily){ el.innerHTML="<div class='err'>Unavailable.</div>"; return; }
+  const d=wx.daily, rh=dailyMinRH(wx), labels=["Low","Moderate","High","Very High","Extreme"];
+  for(let i=0;i<d.time.length;i++){
+    const date=new Date(d.time[i]+"T12:00:00");
+    const dow=date.toLocaleDateString('en-CA',{weekday:'short',timeZone:TZ});
+    const dm=date.toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:TZ});
+    const r=fireWxRisk(d.temperature_2m_max[i], rh[d.time[i]], d.wind_gusts_10m_max[i]||0, d.precipitation_sum[i]||0);
+    const li=levelInfo(r);
+    const div=document.createElement('div'); div.className='day';
+    div.innerHTML=`
+      <div class="dow">${dow}</div><div class="date">${dm}</div>
+      <div class="wx">${r>=3?'🔥':r>=1?'🌤️':'✅'}</div>
+      <span class="chip" style="background:${r===0?COLORS.good:li.col};display:block;margin:4px auto">${labels[r]}</span>
+      <div class="row"><span>🌡️${Math.round(d.temperature_2m_max[i])}°</span><span>RH ${rh[d.time[i]]!=null?Math.round(rh[d.time[i]])+'%':'—'}</span></div>
+      <div class="row"><span>💨${Math.round(d.wind_gusts_10m_max[i]||0)}</span><span>${(d.precipitation_sum[i]||0)>=0.1?fmtNum(d.precipitation_sum[i])+'mm':'dry'}</span></div>`;
+    el.appendChild(div);
+  }
+}
+
+// ---------------- OVERALL ----------------
+function computeOverall(){
+  const cards=['card-fire','card-smoke','card-storm','card-weather'];
+  let max=-1, drivers=[];
+  const names={'card-fire':'wildfire','card-smoke':'smoke/air quality','card-storm':'storms','card-weather':'heat/rain'};
+  cards.forEach(id=>{
+    const r=parseFloat(document.getElementById(id).dataset.risk);
+    if(!isNaN(r)&&r>=0){ if(r>max)max=r; if(r>=2)drivers.push(names[id]); }
+  });
+  const el=document.getElementById('overall');
+  if(max<0){ el.querySelector('.lvl').textContent="Data unavailable";
+    el.querySelector('.desc').textContent="Some sources didn't load — try Refresh."; el.style.background="var(--panel)"; return; }
+  const li=levelInfo(max);
+  el.querySelector('.lvl').textContent = max===0?"Low":li.label;
+  const col = max===0?COLORS.good:li.col;
+  el.style.background = `linear-gradient(135deg, ${col}2e, ${col}10 45%, var(--panel))`;
+  el.style.borderColor = col+"66";
+  let desc;
+  if(max===0) desc="No significant fire, smoke, storm or heat risks for your area today.";
+  else desc=`Main concern${drivers.length>1?'s':''} today: ${drivers.length?drivers.join(', '):'see below'}. Check the cards for detail.`;
+  el.querySelector('.desc').textContent=desc;
+}
+
+// ---------------- SEARCH / GEO / PRESETS ----------------
+const searchBox=document.getElementById('search'), resultsBox=document.getElementById('results');
+let searchTimer;
+searchBox.addEventListener('input',()=>{
+  clearTimeout(searchTimer);
+  const q=searchBox.value.trim();
+  if(q.length<2){resultsBox.style.display='none';return;}
+  searchTimer=setTimeout(()=>doSearch(q),250);
+});
+async function doSearch(q){
+  try{
+    const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&country=CA`;
+    const d=await fetchJSON(url);
+    resultsBox.innerHTML="";
+    if(!d.results||!d.results.length){resultsBox.style.display='none';return;}
+    d.results.forEach(r=>{
+      const div=document.createElement('div');
+      const admin=[r.admin1].filter(Boolean).join(', ');
+      div.textContent=`${r.name}${admin?', '+admin:''}`;
+      div.onclick=()=>{ resultsBox.style.display='none'; searchBox.value=r.name;
+        map.setView([r.latitude,r.longitude],10); setLocation(r.latitude,r.longitude,r.name); };
+      resultsBox.appendChild(div);
+    });
+    resultsBox.style.display='block';
+  }catch(e){ resultsBox.style.display='none'; }
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.search')) resultsBox.style.display='none'; });
+document.getElementById('geo').addEventListener('click',()=>{
+  if(!navigator.geolocation){alert("Geolocation not supported by this browser.");return;}
+  navigator.geolocation.getCurrentPosition(
+    p=>{ map.setView([p.coords.latitude,p.coords.longitude],10); setLocation(p.coords.latitude,p.coords.longitude); },
+    ()=>alert("Couldn't get your location. You can tap the map or search instead."),
+    {enableHighAccuracy:true,timeout:8000}
+  );
+});
+const presetSel=document.getElementById('preset');
+presetSel.innerHTML=`<option value="">Communities…</option>`+
+  COMMUNITIES.map((c,i)=>`<option value="${i}">${c.n}</option>`).join('');
+presetSel.addEventListener('change',()=>{
+  const i=presetSel.value; if(i==="")return;
+  const c=COMMUNITIES[+i]; map.setView([c.lat,c.lon],10); setLocation(c.lat,c.lon,c.n); presetSel.value="";
+});
+document.getElementById('refresh').addEventListener('click',loadAll);
+
+// ---------------- UTILITIES ----------------
+async function fetchJSON(url){
+  const res=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j=await res.json();
+  if(j && j.error) throw new Error(j.error.message||"API error");
+  return j;
+}
+function haversine(la1,lo1,la2,lo2){
+  const R=6371,dLa=rad(la2-la1),dLo=rad(lo2-lo1);
+  const a=Math.sin(dLa/2)**2+Math.cos(rad(la1))*Math.cos(rad(la2))*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function rad(d){return d*Math.PI/180;}
+function fmtNum(n){ if(n==null)return"—"; if(n>=100)return Math.round(n).toLocaleString(); if(n>=10)return n.toFixed(0); return (Math.round(n*10)/10).toString(); }
+function compass(deg){const dirs=["N","NE","E","SE","S","SW","W","NW"];return dirs[Math.round(deg/45)%8];}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function wcodeEmoji(c){
+  if(c==null)return"❓"; if(c===0)return"☀️"; if(c<=2)return"🌤️"; if(c===3)return"☁️";
+  if(c<=48)return"🌫️"; if(c<=57)return"🌦️"; if(c<=67)return"🌧️"; if(c<=77)return"🌨️";
+  if(c<=82)return"🌧️"; if(c<=86)return"🌨️"; if(c<=99)return"⛈️"; return"🌡️";
+}
+function wcodeText(c){
+  const m={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Freezing fog",
+    51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",
+    66:"Freezing rain",67:"Freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",
+    80:"Rain showers",81:"Rain showers",82:"Heavy showers",85:"Snow showers",86:"Snow showers",
+    95:"Thunderstorm",96:"Thunderstorm w/ hail",99:"Severe thunderstorm"};
+  return m[c]||"—";
+}
+
+// ---------------- PWA: install + service worker ----------------
+let deferredPrompt=null;
+const installBtn=document.getElementById('install');
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; installBtn.style.display='inline-flex'; });
+installBtn.addEventListener('click', async()=>{
+  if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none'; }
+});
+window.addEventListener('appinstalled',()=>{ installBtn.style.display='none'; deferredPrompt=null; });
+// iOS: no beforeinstallprompt — show a one-time tip
+(function iosTip(){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if(isIOS && !standalone){
+    const tip=document.getElementById('iostip'); tip.style.display='flex';
+    document.getElementById('iostipx').onclick=()=>tip.style.display='none';
+    setTimeout(()=>{ if(tip) tip.style.display='none'; }, 12000);
+  }
+})();
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+// ---------------- BOOT ----------------
+initMap();
+setLocation(state.lat, state.lon, state.name);
+setInterval(loadAll, 15*60*1000);
+</script>
+</body>
+</html>
