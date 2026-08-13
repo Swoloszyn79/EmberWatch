@@ -1,7 +1,7 @@
 /* EmberWatch service worker — installable PWA + offline app shell.
    Strategy: cache the app shell so it opens instantly / offline.
    Live API calls (BC Wildfire, Open-Meteo) always go to the network. */
-const CACHE = 'emberwatch-v8';
+const CACHE = 'emberwatch-v11';
 const SHELL = [
   './',
   './index.html',
@@ -10,7 +10,8 @@ const SHELL = [
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js'
 ];
 
 self.addEventListener('install', e => {

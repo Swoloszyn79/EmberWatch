@@ -142,6 +142,13 @@
   .tl{flex:0 0 auto;text-align:center;min-width:46px}
   .tl .d{width:16px;height:16px;border-radius:50%;margin:0 auto 5px;box-shadow:0 0 10px currentColor}
   .tl .h{font-size:10.5px;color:var(--muted)}
+  .caveat{margin-top:10px;font-size:12.5px;line-height:1.45;color:var(--text);background:rgba(255,207,63,.10);
+    border:1px solid rgba(255,207,63,.35);border-radius:12px;padding:10px 12px}
+  .airreport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2)}
+  .airreport .rep-q{font-size:12.5px;color:var(--muted);margin-right:2px}
+  .airreport .rep-on{font-size:12.5px;color:var(--clear);font-weight:600;margin-right:auto}
+  .rep-btn{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600}
+  .rep-btn:active{transform:scale(.96)}
 
   /* ---------- nearest fire ---------- */
   .fire .frow{display:flex;align-items:flex-start;gap:12px}
@@ -151,6 +158,8 @@
   .concern{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px}
   .concern .b{font-weight:800;padding:4px 11px;border-radius:999px;color:#0a0f16}
   .fire .expl{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .hotline{font-size:12.5px;color:var(--text);margin-top:10px;line-height:1.45;background:var(--card-2);border:1px solid var(--line-2);border-radius:12px;padding:9px 12px}
+  .hotline .src{border-color:rgba(255,106,0,.4);color:var(--ember2)}
   .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .btn{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:12px;
     padding:11px 14px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
@@ -193,6 +202,9 @@
   .windchip b{color:var(--info)}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin:10px 2px 0;color:var(--muted);font-size:12px}
   .legend .sq{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .gradbar{display:inline-block;width:88px;height:10px;border-radius:5px;vertical-align:-1px}
+  .gradbar.smoke{background:linear-gradient(90deg,#ffe08a,#ffcf3f,#ff9838,#ff4d4d,#b06bff)}
+  .gradbar.fire{background:linear-gradient(90deg,rgba(255,140,60,.25),#ffab3d,#ff6a00,#ff2b2b)}
 
   /* ---------- learn ---------- */
   .learn h3{font-family:var(--disp);font-size:15px;margin:16px 0 5px}
@@ -300,8 +312,10 @@
       <div class="sec-title">Air quality</div>
       <div class="airtop"><span class="d" id="airDot"></span><span class="lv" id="airLv">—</span></div>
       <div class="airdesc" id="airDesc"></div>
+      <div class="caveat" id="airCaveat" style="display:none"></div>
       <div class="airmeta" id="airMeta"></div>
       <div class="timeline" id="airTimeline"></div>
+      <div class="airreport" id="airReport"></div>
     </div>
 
     <div class="card fire" id="fireCard">
@@ -337,6 +351,8 @@
     </div>
     <div class="mapbtns">
       <button class="btn" id="mapGeo">📍 My location</button>
+      <button class="btn" id="mapSmoke">🌫️ Smoke: on</button>
+      <button class="btn" id="mapHot">🔥 Hotspots: on</button>
       <button class="btn" id="mapRefresh">↻ Refresh</button>
     </div>
     <div class="maphint muted" style="font-size:12px;margin:0 2px 8px">Tap anywhere on the map to set your location, or drag the pin.</div>
@@ -346,6 +362,12 @@
       <span><span class="sq" style="background:var(--act)"></span>Fire perimeter / evacuation</span>
       <span><span class="sq" style="background:var(--info)"></span>Your location</span>
       <span><span class="sq" style="background:var(--info)"></span>Wind arrows (blowing toward)</span>
+    </div>
+    <div class="legend" style="margin-top:8px;align-items:center">
+      <span>🌫️ Smoke haze</span><span class="gradbar smoke"></span><span class="muted">light → heavy (only where air is worse than good)</span>
+    </div>
+    <div class="legend" style="margin-top:6px;align-items:center">
+      <span>🔥 Fire activity</span><span class="gradbar fire"></span><span class="muted">satellite heat · zoom in for individual hotspots</span>
     </div>
     <div id="mapStamp" class="muted" style="font-size:12px;margin-top:8px"></div>
   </section>
@@ -365,7 +387,11 @@
       <details class="acc"><summary>What is the EmberWatch status?</summary><div class="body">
         <p>A single plain-language read of everything around you: <strong>CLEAR</strong> (nothing significant), <strong>WATCH</strong> (conditions changing), <strong>CONCERN</strong> (something could affect you today), <strong>ACT NOW</strong> (an official evacuation notice or immediate hazard). It is EmberWatch's own assessment — not a government classification. An official evacuation order or alert always overrides it.</p></div></details>
       <details class="acc"><summary>AQHI vs AQI vs PM2.5</summary><div class="body">
-        <p>Canada uses the <strong>Air Quality Health Index (AQHI)</strong>, 1–10+: 1–3 low risk, 4–6 moderate, 7–10 high, 10+ very high. We also show the U.S. <strong>AQI</strong> (0–500), which is more granular in heavy smoke, and <strong>PM2.5</strong> — the fine smoke particles (µg/m³) that matter most during wildfires.</p></div></details>
+        <p>Canada uses the <strong>Air Quality Health Index (AQHI)</strong>, 1–10+: 1–3 low risk, 4–6 moderate, 7–10 high, 10+ very high. We also show the U.S. <strong>AQI</strong> (0–500), which is more granular in heavy smoke, and <strong>PM2.5</strong> — the fine smoke particles (µg/m³) that matter most during wildfires. EmberWatch shows the <strong>worst</strong> of these three so a single low reading can't mask a problem.</p>
+        <p><strong>Important limitation:</strong> the air-quality data comes from a global model at roughly 40 km resolution. It can <strong>under-report a local wildfire smoke plume</strong> — so on a smoky day it may still say “moderate.” When a fire is nearby or upwind, EmberWatch lowers its confidence and warns you to trust your senses, and you can tap <strong>“Looks smoky?”</strong> on the Air card to override it with what you actually see. If it looks or smells smoky, treat the air as poor regardless of the number.</p></div></details>
+      <details class="acc"><summary>Satellite hotspots 🛰️</summary><div class="body">
+        <p><strong>Satellite thermal hotspots</strong> are heat signatures detected by NASA's VIIRS satellites (via Esri's Living Atlas, updated roughly hourly). They often catch heat <strong>before</strong> a fire is officially reported, which is why EmberWatch overlays them on the map and factors recent, nearby detections into your risk.</p>
+        <p><strong>Important:</strong> a hotspot is not a confirmed wildfire. Satellites can also detect industrial flares, agricultural or prescribed burns, and even strong sun glint, and each detection has roughly 375 m of location uncertainty with gaps between satellite passes. EmberWatch treats them conservatively and always labels them separately from official BC Wildfire incidents.</p></div></details>
       <details class="acc"><summary>Nearby Fire Concern</summary><div class="body">
         <p>How much a nearby wildfire could matter to <em>your</em> spot — based on the fire's <strong>size</strong>, <strong>stage of control</strong>, whether it's a “fire of note”, its <strong>distance</strong>, and whether <strong>wind</strong> is carrying conditions toward you. A small, contained fire close by stays Low; a large out-of-control fire raises it even from farther away. It is not a property-safety guarantee.</p></div></details>
       <details class="acc"><summary>Fire-weather &amp; dryness</summary><div class="body">
@@ -414,6 +440,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
 "use strict";
 /* ============================================================================
@@ -432,7 +459,8 @@ const CONFIG = {
     geocode: "https://geocoding-api.open-meteo.com/v1/search",
     fires: "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/BCWS_ActiveFires_PublicView/FeatureServer/0/query",
     perimeters: "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/BCWS_FirePerimeters_PublicView/FeatureServer/0/query",
-    evac: "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/Evacuation_Orders_and_Alerts/FeatureServer/0/query"
+    evac: "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/Evacuation_Orders_and_Alerts/FeatureServer/0/query",
+    hotspots: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Satellite_VIIRS_Thermal_Hotspots_and_Fire_Activity/FeatureServer/0/query"
   },
   cacheTTL: 8 * 60 * 1000,       // 8 min in-memory cache per (source,place)
   staleWarn: { fires: 45*60*1000, air: 90*60*1000, weather: 120*60*1000, evac: 30*60*1000 },
@@ -499,10 +527,12 @@ const Store = {
   savePlaces(list){ Store.set(Store.KEY_PLACES, list); },
   selected(){ return Store.get(Store.KEY_SEL, null); },
   saveSelected(p){ Store.set(Store.KEY_SEL, p); },
-  KEY_SNAP: "ew_snap_v1",
+  KEY_SNAP: "ew_snap_v1", KEY_REPORT: "ew_report_v1",
   placeId(p){ return p.lat.toFixed(3)+","+p.lon.toFixed(3); },
   snap(id){ return (Store.get(Store.KEY_SNAP, {})||{})[id] || null; },
-  saveSnap(id, s){ const all=Store.get(Store.KEY_SNAP, {})||{}; all[id]=s; Store.set(Store.KEY_SNAP, all); }
+  saveSnap(id, s){ const all=Store.get(Store.KEY_SNAP, {})||{}; all[id]=s; Store.set(Store.KEY_SNAP, all); },
+  report(id){ const r=(Store.get(Store.KEY_REPORT, {})||{})[id]||null; return (r && (Date.now()-r.at)<3*3600e3) ? r : null; },
+  saveReport(id, r){ const all=Store.get(Store.KEY_REPORT, {})||{}; if(r) all[id]=r; else delete all[id]; Store.set(Store.KEY_REPORT, all); }
 };
 
 /* ------------------------------ Data layer ------------------------------ */
@@ -571,6 +601,36 @@ const Data = {
   async geocode(name){
     const d=await Data._json(`${CONFIG.endpoints.geocode}?name=${encodeURIComponent(name)}&count=6&language=en&country=CA`);
     return (d&&d.results)||[];
+  },
+  // Satellite VIIRS thermal hotspots (last 24h) near the location — for risk analysis.
+  _hotParse(d, lat, lon){
+    return ((d&&d.features)||[]).map(f=>{ const a=f.attributes||{}, g=f.geometry||{};
+      const flat=(a.latitude!=null)?a.latitude:g.y, flon=(a.longitude!=null)?a.longitude:g.x;
+      return { lat:flat, lon:flon, hoursOld:N(a.hours_old), frp:N(a.frp), conf:(a.confidence||"").toString(),
+        dist:(flat!=null&&flon!=null&&lat!=null)?Geo.haversine(lat,lon,flat,flon):null };
+    }).filter(x=>x.lat!=null);
+  },
+  hotspots(lat, lon){ return Data._cached("hot", lat, lon, async ()=>{
+    const env={ xmin:lon-1.0, ymin:lat-0.8, xmax:lon+1.0, ymax:lat+0.8 };
+    const q=new URLSearchParams({ f:"json", where:"hours_old <= 24", outFields:"latitude,longitude,hours_old,frp,confidence",
+      returnGeometry:"true", outSR:"4326", inSR:"4326", geometryType:"esriGeometryEnvelope",
+      spatialRel:"esriSpatialRelIntersects", geometry:JSON.stringify(env), resultRecordCount:"2000" });
+    return Data._hotParse(await Data._json(`${CONFIG.endpoints.hotspots}?${q}`), lat, lon);
+  }); },
+  async hotspotsArea(xmin,ymin,xmax,ymax){
+    const q=new URLSearchParams({ f:"json", where:"hours_old <= 24", outFields:"latitude,longitude,hours_old,frp,confidence",
+      returnGeometry:"true", outSR:"4326", inSR:"4326", geometryType:"esriGeometryEnvelope",
+      spatialRel:"esriSpatialRelIntersects", geometry:JSON.stringify({xmin,ymin,xmax,ymax}), resultRecordCount:"2000" });
+    return Data._hotParse(await Data._json(`${CONFIG.endpoints.hotspots}?${q}`), null, null);
+  },
+  // Multi-point PM2.5/AQI for the map smoke overlay (one Open-Meteo call).
+  async smokeGrid(pts){
+    const lats=pts.map(p=>p.lat.toFixed(3)).join(','), lons=pts.map(p=>p.lon.toFixed(3)).join(',');
+    const u=`${CONFIG.endpoints.air}?latitude=${lats}&longitude=${lons}&current=us_aqi,pm2_5`;
+    const j=await Data._json(u);
+    const arr=Array.isArray(j)?j:[j];
+    return arr.map((o,i)=>({ lat:pts[i].lat, lon:pts[i].lon,
+      aqi:o&&o.current?N(o.current.us_aqi):null, pm:o&&o.current?N(o.current.pm2_5):null }));
   }
 };
 
@@ -615,15 +675,19 @@ const Engine = {
   air(aq){
     const out={ ok:!!aq, level:0, label:"—", color:C('--dim'), desc:"", aqhi:null, aqiNow:null,
       pm25:null, trend:"→", trendLabel:"Stable", timeline:[], goodUntil:null,
-      hazardous:false, eveningBand:null, eveningWhen:null };
+      hazardous:false, eveningBand:null, eveningWhen:null,
+      confidence:"High", caveat:null, reported:false, modelBand:0 };
     if(!aq) { out.desc="Air-quality data is unavailable right now."; return out; }
     const cur=aq.current||{};
     out.aqhi = Engine.aqhi(N(cur.ozone), N(cur.nitrogen_dioxide), N(cur.pm2_5));
     out.aqiNow = N(cur.us_aqi);
     out.pm25 = N(cur.pm2_5);
-    const band = out.aqhi!=null ? Engine.aqhiBand(out.aqhi)
-               : (out.aqiNow==null?0: out.aqiNow<=50?0: out.aqiNow<=100?1: out.aqiNow<=150?2:3);
-    out.level = band;
+    // Take the WORST of the available indicators, so one high signal isn't hidden by a low one.
+    const bAqhi = out.aqhi!=null ? Engine.aqhiBand(out.aqhi) : null;
+    const bAqi  = out.aqiNow==null?null : out.aqiNow<=50?0 : out.aqiNow<=100?1 : out.aqiNow<=150?2 : 3;
+    const bPm   = out.pm25==null?null : out.pm25<=12?0 : out.pm25<=35?1 : out.pm25<=55?2 : 3;
+    const band = Math.max(0, bAqhi==null?0:bAqhi, bAqi==null?0:bAqi, bPm==null?0:bPm);
+    out.level = band; out.modelBand = band;
     const map=[
       {label:"Good", color:C('--clear'), desc:"Air quality is good — fine for everyone."},
       {label:"Moderate", color:C('--watch'), desc:"Okay for most people. Smoke-sensitive people may want to ease long or intense outdoor activity."},
@@ -766,7 +830,7 @@ const Engine = {
      Final state = highest contribution, with ONE escalation rule (3+ WATCH factors → CONCERN).
      Official evacuation always takes precedence. ACT NOW is used very conservatively. */
   status(ctx){
-    const {air, fire, storm, heat, evac} = ctx;
+    const {air, fire, storm, heat, evac, hot} = ctx;
     let state=0, official=null;
     const F=[]; const add=(lvl,w,ic,title,detail)=>F.push({lvl,w,ic,title,detail});
     const fh = d => d ? fmtTimeHour(d) : null;
@@ -794,6 +858,14 @@ const Engine = {
         : (drift.text? drift.text+"." : "Distance and current winds keep the direct risk lower for now.");
       if(fire.level>=2){ state=Math.max(state,2); add(2,68,"🔥",`${esc(w.status||"Active")} fire ${rnd(w.dist)} km ${dir}${w.size!=null?` (${fmtNum(w.size)} ha)`:""}`, detail); }
       else if(fire.level===1){ state=Math.max(state,1); add(1,50,"🔥",`${esc(w.status||"Active")} fire ${rnd(w.dist)} km ${dir}`, detail); }
+    }
+
+    // 3b) Satellite thermal hotspots (conservative — heat can be non-wildfire)
+    if(hot && hot.ok && hot.nearest){
+      const near=hot.nearest, cnt=hot.n25;
+      const cav=`${cnt} thermal detection${cnt!==1?'s':''} within 25 km in the last 24 h. Satellite heat can include other sources — treat as a possible new or growing fire.`;
+      if(hot.level>=3){ state=Math.max(state,2); add(2,64,"🛰️",`Satellite hotspots ~${rnd(near.dist)} km away`, cav); }
+      else if(hot.level>=1){ state=Math.max(state,1); add(1,44,"🛰️",`Satellite hotspots ~${rnd(near.dist)} km away`, cav); }
     }
 
     // 4) Storms / lightning (moderate→WATCH, severe→CONCERN)
@@ -929,10 +1001,11 @@ const Engine = {
     else if(storm.risk>=2 && storm.firstHour) bestWindow={ text:`Now – ~${fmtTimeHour(storm.firstHour)}`, sub:"Good until thunderstorms may develop this afternoon." };
     else if(aqi===0 && storm.risk===0 && heat.level<2) bestWindow={ text:"All day looks good", sub:"No significant smoke, storms or heat expected today." };
 
-    const note = air.trend==="↑" ? "Smoke is expected to increase later — plan outdoor time earlier."
+    const note = air.level>=2 ? "Air is poor right now — keep outdoor time short and easy, especially for kids and smoke-sensitive people."
+      : air.trend==="↑" ? "Smoke is expected to increase later — plan outdoor time earlier."
       : storm.risk>=2 ? "Thunderstorms possible later — watch the sky, especially on the water."
       : heat.level>=2 ? "It's hot — hydrate, take breaks and use shade."
-      : "Conditions look good for time outside.";
+      : (air.caveat ? "Conditions look okay in the data — but if it looks or smells smoky, trust your senses." : "Conditions look good for time outside.");
     return { items, bestWindow, note };
   }
 };
@@ -1002,7 +1075,8 @@ Engine.snapshot=function(b){
     fireStatus:f?f.status:null, fireOfNote:f?!!f.ofNote:false, fireConcern:b.fire?b.fire.level:0,
     aqhi:b.air?b.air.aqhi:null, pm25:b.air&&b.air.pm25!=null?Math.round(b.air.pm25):null, aqiBand:b.air?b.air.level:null, smokeTrend:b.air?b.air.trend:null,
     windDir:b.wx&&b.wx.current?N(b.wx.current.wind_direction_10m):null, windSpd:b.wx&&b.wx.current?N(b.wx.current.wind_speed_10m):null,
-    stormRisk:b.storm?b.storm.risk:0, evacKey:b.evac&&b.evac.highest?b.evac.highest.status:null, rainSoon:Engine._rainSoon(b.wx) };
+    stormRisk:b.storm?b.storm.risk:0, evacKey:b.evac&&b.evac.highest?b.evac.highest.status:null, rainSoon:Engine._rainSoon(b.wx),
+    hotN25:b.hot?b.hot.n25:0, hotLevel:b.hot?b.hot.level:0, hotNear:b.hot&&b.hot.nearest?Math.round(b.hot.nearest.dist):null };
 };
 Engine.aqhiBandName=function(a){ return a==null?null : a<=3?"Low":a<=6?"Moderate":a<=10?"High":"Very high"; };
 Engine.whatChanged=function(prev, cur){
@@ -1024,6 +1098,8 @@ Engine.whatChanged=function(prev, cur){
     if(Math.abs(d)>=10 && prev.pm25>0 && Math.abs(d)/Math.max(prev.pm25,10)>=0.4) out.push({ic:d>0?"🌫":"✓", worse:d>0, t:`PM2.5 ${d>0?"rose":"fell"} ${prev.pm25} → ${cur.pm25} µg/m³`}); }
   if(cur.windDir!=null && prev.windDir!=null && (cur.fireConcern>=1||prev.fireConcern>=1) && Geo.angDiff(cur.windDir,prev.windDir)>=60)
     out.push({ic:"💨", worse:false, t:`Winds shifted ${Geo.compass(cur.windDir)}`});
+  if((cur.hotLevel||0)>(prev.hotLevel||0) && cur.hotNear!=null) out.push({ic:"🛰️", worse:true, t:`New satellite hotspots detected ~${cur.hotNear} km away`});
+  else if((cur.hotN25||0)-(prev.hotN25||0)>=8) out.push({ic:"🛰️", worse:true, t:`Satellite hotspots nearby rose ${prev.hotN25} → ${cur.hotN25} (25 km, 24 h)`});
   if(cur.stormRisk>=2 && prev.stormRisk<2) out.push({ic:"⛈", worse:true, t:"Thunderstorm risk developing"});
   else if(prev.stormRisk>=2 && cur.stormRisk<2) out.push({ic:"✓", worse:false, t:"Thunderstorm risk has eased"});
   if(cur.rainSoon && !prev.rainSoon) out.push({ic:"🌧", worse:false, t:"Rain is now expected in the next several hours"});
@@ -1032,6 +1108,58 @@ Engine.whatChanged=function(prev, cur){
 Engine.changeLabel=function(gapMs){
   if(gapMs==null) return null; const h=gapMs/3600000;
   if(h<3) return "In the last few hours"; if(h<24) return "Since earlier today"; if(h<48) return "Since yesterday"; return "Since your last visit";
+};
+/* Satellite thermal hotspots → a 'thermal activity' signal (conservative — VIIRS
+   heat can include industrial/agricultural sources and has ~375 m location error). */
+Engine.hotspots=function(points, lat, lon){
+  const out={ ok:!!points, count24:0, n10:0, n25:0, n50:0, nearest:null, level:0 };
+  if(!points){ out.ok=false; return out; }
+  points.forEach(p=>{ if(p.dist==null) return; out.count24++;
+    if(p.dist<=10)out.n10++; if(p.dist<=25)out.n25++; if(p.dist<=50)out.n50++;
+    if(!out.nearest || p.dist<out.nearest.dist) out.nearest=p; });
+  const d=out.nearest?out.nearest.dist:null; let lvl=0;
+  if(d!=null){ if(d<=5)lvl=3; else if(d<=15)lvl=2; else if(d<=30)lvl=1; }
+  if(out.n25>=12) lvl=Math.max(lvl,2); else if(out.n25>=5) lvl=Math.max(lvl,1);
+  out.level=Math.min(3,lvl);
+  return out;
+};
+Engine._airBandInfo=function(b){
+  return [
+    {label:"Good",      color:C('--clear'),  desc:"Air quality is good — fine for everyone."},
+    {label:"Moderate",  color:C('--watch'),  desc:"Okay for most people. Smoke-sensitive people may want to ease long or intense outdoor activity."},
+    {label:"Poor",      color:C('--concern'),desc:"Reduce or reschedule strenuous outdoor activity, especially if you're smoke-sensitive."},
+    {label:"Very poor", color:C('--hazard'), desc:"Avoid outdoor exertion and keep windows closed. Everyone can be affected."}
+  ][Math.max(0,Math.min(3,b))];
+};
+/* Corrects for the CAMS model's coarse resolution, which can under-read a local
+   wildfire smoke plume. Uses visibility + an upwind fire + the user's own report. */
+Engine.smokeAdjust=function(air, wx, fire, report){
+  if(!air || !air.ok) return air;
+  const raise=(b, desc, caveat, conf)=>{ if(b>air.level){ const i=Engine._airBandInfo(b); air.level=b; air.label=i.label; air.color=i.color; air.desc=desc||i.desc; } if(caveat) air.caveat=caveat; if(conf) air.confidence=conf; };
+  // 1) User's on-the-ground report overrides the model (valid ~3h)
+  if(report && report.band!=null && (Date.now()-report.at)<3*3600e3){
+    air.reported=true;
+    raise(report.band,
+      report.band>=3 ? "You reported heavy smoke — treat air as very poor: stay indoors with windows closed."
+                     : "You reported smoky conditions — treat air as poor and keep outdoor time short and easy.",
+      "Based on what you're seeing right now. Local smoke is often worse than models show.", "High");
+    return air;
+  }
+  // 2) Visibility corroboration — only near an active fire and not during rain (avoids fog false-positives)
+  const visM = wx ? nearestHourly(wx,'visibility') : null;
+  const raining = wx&&wx.current ? (N(wx.current.precipitation)||0)>=0.3 : false;
+  const fireNear = fire && fire.worst && fire.worst.dist!=null && fire.worst.dist<=120;
+  if(visM!=null && fireNear && !raining){
+    const vk=visM/1000; let vb=null; if(vk<2.5)vb=3; else if(vk<6)vb=2; else if(vk<10)vb=1;
+    if(vb!=null && vb>air.level) raise(vb, null, `Visibility is only ~${Math.round(vk)} km — that suggests more smoke than the air-quality model is showing.`, "Moderate");
+  }
+  // 3) Upwind / nearby fire — don't over-trust a "good/moderate" model reading
+  const upwind = fire && fire.worst && fire.drift && fire.drift.toward && fire.worst.dist<=100;
+  if(air.level<=1){
+    if(upwind){ air.confidence="Low"; if(!air.caveat) air.caveat="A wildfire is upwind and smoke can be patchy — conditions may be worse than the model shows. Trust your senses."; }
+    else if(fireNear){ if(air.confidence==="High") air.confidence="Moderate"; if(!air.caveat) air.caveat="Smoke near active fires can be local and change fast — if it looks or smells smoky, treat the air as poor."; }
+  }
+  return air;
 };
 Engine.watchNext=function(ctx){
   const {air, storm, wx, fire}=ctx; const out=[];
@@ -1046,7 +1174,8 @@ Engine.watchNext=function(ctx){
 
 /* ------------------------------ App / UI -------------------------------- */
 const App = {
-  place: null, bundle:null, map:null, mapLayers:{}, mapInited:false,
+  place: null, bundle:null, map:null, mapLayers:{}, mapInited:false, smokeOn:true, hotOn:true,
+  reportSmoke(band){ Store.saveReport(Store.placeId(App.place), band==null?null:{band, at:Date.now()}); UI.toast(band==null?"Report cleared":"Thanks — using your report"); App.load(); },
 
   visitBaseline:null,
   beginVisit(){ App.visitBaseline = Store.snap(Store.placeId(App.place)); },
@@ -1064,8 +1193,8 @@ const App = {
   async load(){
     UI.setFresh(true);
     const {lat,lon}=App.place;
-    const [wxR, aqR, firesR, evacR] = await Promise.all([
-      Data.weather(lat,lon), Data.air(lat,lon), Data.fires(lat,lon), Data.evac(lat,lon)
+    const [wxR, aqR, firesR, evacR, hotR] = await Promise.all([
+      Data.weather(lat,lon), Data.air(lat,lon), Data.fires(lat,lon), Data.evac(lat,lon), Data.hotspots(lat,lon)
     ]);
     const wx=wxR.data, aq=aqR.data, fires=firesR.data, evacF=evacR.data;
     // engine
@@ -1074,14 +1203,16 @@ const App = {
     const storm=Engine.storm(wx);
     const heat=Engine.heat(wx);
     const evac=Engine.evac(evacF, lat, lon);
-    const status=Engine.status({air, fire, storm, heat, evac});
+    const hot=Engine.hotspots(hotR.data, lat, lon);
+    Engine.smokeAdjust(air, wx, fire, Store.report(Store.placeId(App.place)));  // correct for coarse-model smoke under-reads
+    const status=Engine.status({air, fire, storm, heat, evac, hot});
     const periods=Engine.periods({air, storm, wx, fire, _aq:aq});
     const activities=Engine.activities({air, heat, storm, wx});
     const watchNext=Engine.watchNext({air, storm, wx, fire});
     const fireWind=fire.worst?Engine.fireWind(fire.worst, wx):null;
-    const bundle={ wx,aq,fires,evacF, air,fire,storm,heat,evac,status,periods,activities,watchNext,fireWind,
-      ts:{ weather:wxR.at, air:aqR.at, fires:firesR.at, evac:evacR.at },
-      ok:{ weather:wxR.ok, air:aqR.ok, fires:firesR.ok, evac:evacR.ok } };
+    const bundle={ wx,aq,fires,evacF, air,fire,storm,heat,evac,hot,status,periods,activities,watchNext,fireWind,
+      ts:{ weather:wxR.at, air:aqR.at, fires:firesR.at, evac:evacR.at, hot:hotR.at },
+      ok:{ weather:wxR.ok, air:aqR.ok, fires:firesR.ok, evac:evacR.ok, hot:hotR.ok } };
     // --- What Changed (vs the snapshot from the user's last visit) ---
     const cur=Engine.snapshot(bundle);
     bundle.changes = App.visitBaseline ? Engine.whatChanged(App.visitBaseline, cur) : [];
@@ -1151,12 +1282,14 @@ const UI = {
         ()=>{ gb.innerHTML='📍 My location'; UI.toast("Couldn't get your location"); }, {enableHighAccuracy:true,timeout:8000}); });
     const rb=UI.el('mapRefresh'); if(rb) rb.addEventListener('click',()=>{ rb.innerHTML='<span class="spin"></span> Refreshing…';
       Data._cache={}; App.load().then(()=>{ rb.innerHTML='↻ Refresh'; UI.toast("Refreshed"); }).catch(()=>{ rb.innerHTML='↻ Refresh'; }); });
+    const sb=UI.el('mapSmoke'); if(sb) sb.addEventListener('click',()=>{ App.smokeOn=!App.smokeOn; UI.renderSmokeLayer(); });
+    const hb=UI.el('mapHot'); if(hb) hb.addEventListener('click',()=>{ App.hotOn=!App.hotOn; UI.renderHotspots(); });
   },
   showView(v){
     document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id==='view-'+v));
     document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
     window.scrollTo(0,0);
-    if(v==='map'){ UI.ensureMap(); setTimeout(()=>{ if(App.map){App.map.invalidateSize(); UI.renderMap();} },60); }
+    if(v==='map'){ UI.ensureMap(); setTimeout(()=>{ if(App.map){App.map.invalidateSize(); UI.renderMap(); UI.renderSmokeLayer(); UI.renderHotspots();} },60); }
   },
 
   /* ---- Home ---- */
@@ -1256,15 +1389,37 @@ const UI = {
     if(air.aqiNow!=null) meta.push(`<span class="pill"><span class="mut">US AQI</span> <b>${rnd(air.aqiNow)}</b></span>`);
     if(air.pm25!=null) meta.push(`<span class="pill"><span class="mut">PM2.5</span> <b>${rnd(air.pm25)}</b> <span class="mut">µg/m³</span></span>`);
     meta.push(`<span class="pill">${air.trend} <b>${air.trendLabel}</b></span>`);
+    if(air.ok && air.confidence && air.confidence!=="High") meta.push(`<span class="pill"><span class="mut">Confidence</span> <b>${air.confidence}</b></span>`);
     UI.el('airMeta').innerHTML=meta.join('');
+    // caveat (model may under-read local smoke)
+    const cav=UI.el('airCaveat');
+    if(air.caveat){ cav.style.display=''; cav.textContent="⚠️ "+air.caveat; } else cav.style.display='none';
+    // timeline
     UI.el('airTimeline').innerHTML = air.timeline.length
       ? air.timeline.map(x=>`<div class="tl"><div class="d" style="background:${x.color};color:${x.color}"></div><div class="h">${x.t}</div></div>`).join('')
       : `<span class="muted" style="font-size:12.5px">Hourly air-quality forecast unavailable.</span>`;
+    // on-the-ground report control
+    const rc=UI.el('airReport');
+    if(air.reported){
+      rc.innerHTML=`<span class="rep-on">✓ Using your report</span><button class="rep-btn" data-clear>Undo</button>`;
+      rc.querySelector('[data-clear]').addEventListener('click',()=>App.reportSmoke(null));
+    } else {
+      rc.innerHTML=`<span class="rep-q">Looks smoky out your window?</span>`+
+        `<button class="rep-btn" data-rep="2">🌫️ Hazy / smoky</button>`+
+        `<button class="rep-btn" data-rep="3">🚫 Heavy smoke</button>`;
+      rc.querySelectorAll('[data-rep]').forEach(b=>b.addEventListener('click',()=>App.reportSmoke(+b.dataset.rep)));
+    }
   },
+  hotLine(){
+    const hot=App.bundle.hot; if(!hot||!hot.ok) return "";
+    if(hot.count24>0) return `<div class="hotline"><span class="src">🛰️ SATELLITE</span> ${hot.n25} thermal hotspot${hot.n25!==1?'s':''} within 25 km in the last 24 h${hot.nearest?`, nearest ~${rnd(hot.nearest.dist)} km`:''}. <span class="muted">Detections can include other heat sources.</span> <a href="#" data-hotmap>View on map</a></div>`;
+    return `<div class="hotline muted">🛰️ No satellite hotspots within ~90 km in the last 24 h.</div>`;
+  },
+  wireHotMap(host){ const a=host.querySelector('[data-hotmap]'); if(a) a.addEventListener('click',e=>{ e.preventDefault(); App.smokeOn=App.smokeOn; App.hotOn=true; UI.showView('map'); }); },
   renderFire(){
-    const f=App.bundle.fire, host=UI.el('fireBody');
-    if(!f.ok){ host.innerHTML=`<div class="err">Fire data unavailable right now. <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">Official map ↗</a></div>`; return; }
-    if(!f.worst){ host.innerHTML=`<div class="frow"><div class="fem">✅</div><div><div class="fname">No active fires nearby</div><div class="fsub">Nothing active within ~200 km of here.</div></div></div>`; return; }
+    const f=App.bundle.fire, host=UI.el('fireBody'), hl=UI.hotLine();
+    if(!f.ok){ host.innerHTML=`<div class="err">Fire data unavailable right now. <a href="https://wildfiresituation.nrs.gov.bc.ca/map" target="_blank" rel="noopener">Official map ↗</a></div>`+hl; UI.wireHotMap(host); return; }
+    if(!f.worst){ host.innerHTML=`<div class="frow"><div class="fem">✅</div><div><div class="fname">No active fires nearby</div><div class="fsub">No BC Wildfire incidents within ~200 km of here.</div></div></div>`+hl; UI.wireHotMap(host); return; }
     const w=f.worst, dir=w.bearing!=null?Geo.compass(w.bearing):"";
     const fw=App.bundle.fireWind;
     const stale=(Date.now()-(App.bundle.ts.fires||0))>CONFIG.staleWarn.fires;
@@ -1276,12 +1431,14 @@ const UI = {
       </div></div>
       <div class="concern"><span class="src">EMBERWATCH</span> Nearby Fire Concern: <span class="b" style="background:${f.color}">${f.label}</span></div>
       <div class="expl"><b>Now:</b> ${fw?esc(fw.current):esc(f.expl)}${fw&&fw.later?`<br><b>Later:</b> ${esc(fw.later)}`:""}</div>
+      ${hl}
       <div class="btnrow">
         <button class="btn primary" id="viewFireBtn">🗺️ View on map</button>
         ${w.url?`<a class="btn" href="${esc(w.url)}" target="_blank" rel="noopener">Official info ↗</a>`:""}
       </div>
-      <div class="muted" style="font-size:11.5px;margin-top:10px">${stale?`⚠️ Fire information may be outdated — last update ${ago(App.bundle.ts.fires)}.`:`Fire data updated ${ago(App.bundle.ts.fires)} · BC Wildfire Service`}</div>`;
+      <div class="muted" style="font-size:11.5px;margin-top:10px">${stale?`⚠️ Fire information may be outdated — last update ${ago(App.bundle.ts.fires)}.`:`Fire data updated ${ago(App.bundle.ts.fires)} · BC Wildfire · hotspots ${ago(App.bundle.ts.hot)}`}</div>`;
     const vb=UI.el('viewFireBtn'); if(vb) vb.addEventListener('click',()=>{ UI.showView('map'); setTimeout(()=>{ if(App.map)App.map.setView([w.lat,w.lon],9); },120); });
+    UI.wireHotMap(host);
   },
   renderPlaces(){
     const host=UI.el('placesList'), list=Store.places(), sel=App.place;
@@ -1376,11 +1533,59 @@ const UI = {
     App.mapLayers.fires=L.layerGroup().addTo(App.map);
     App.mapLayers.perim=L.layerGroup().addTo(App.map);
     App.mapLayers.evac=L.layerGroup().addTo(App.map);
+    App.mapLayers.smoke=L.layerGroup().addTo(App.map);   // below everything
+    App.mapLayers.hot=L.layerGroup().addTo(App.map);     // satellite hotspots
     App.mapLayers.wind=L.layerGroup().addTo(App.map);
     App.mapLayers.me=L.layerGroup().addTo(App.map);
     App.map.on('click', e=> App.selectPlaceFromMap(e.latlng.lat, e.latlng.lng));
-    App.map.on('moveend', ()=>{ try{ UI.renderWind(); }catch(e){} });
+    App.map.on('moveend', ()=>{ try{ UI.renderWind(); }catch(e){} try{ UI.renderSmokeLayer(); }catch(e){} try{ UI.renderHotspots(); }catch(e){} });
     App.mapInited=true;
+  },
+  async renderHotspots(){
+    if(!App.mapInited) return;
+    const layer=App.mapLayers.hot; if(!layer) return; layer.clearLayers();
+    const btn=UI.el('mapHot'); if(btn) btn.textContent = App.hotOn ? "🔥 Hotspots: on" : "🔥 Hotspots: off";
+    if(!App.hotOn) return;
+    const b=App.map.getBounds().pad(0.15);
+    let pts; try{ pts=await Data.hotspotsArea(b.getWest(),b.getSouth(),b.getEast(),b.getNorth()); }catch(e){ return; }
+    if(!App.hotOn) return;
+    if(!pts.length){ return; }
+    // 1) A warm 'fire-activity' glow that pools where detections cluster (reads as heat, not dots)
+    if(L.heatLayer){
+      const heat=pts.slice(0,3000).map(p=>{ const h=p.hoursOld==null?24:p.hoursOld;
+        let wgt = h<=6?1 : h<=12?0.75 : 0.5; if(p.frp&&p.frp>=100) wgt=Math.min(1,wgt+0.15); return [p.lat,p.lon,wgt]; });
+      L.heatLayer(heat, { radius:18, blur:24, max:1, minOpacity:0.35,
+        gradient:{0.0:'rgba(255,140,60,0)', 0.35:'#ffab3d', 0.65:'#ff6a00', 1.0:'#ff2b2b'} }).addTo(layer);
+    }
+    // 2) Individual clickable detections only when zoomed in — keeps the regional view clean
+    if(App.map.getZoom()>=9){
+      pts.slice(0,600).forEach(p=>{ const h=p.hoursOld==null?24:p.hoursOld;
+        const col = h<=6?'#ff2b2b' : h<=12?'#ff6a00' : '#ffab3d';
+        L.circleMarker([p.lat,p.lon],{radius:4, color:'#fff', weight:0.7, fillColor:col, fillOpacity:0.92})
+          .addTo(layer).bindPopup(`<b>🔥 Satellite hotspot</b><br>${p.hoursOld!=null?p.hoursOld+' h ago':''}${p.conf?` · ${esc(p.conf)} confidence`:''}${p.frp!=null?`<br>Fire radiative power ${rnd(p.frp)} MW`:''}<br><span style="color:${C('--muted')};font-size:11px">VIIRS thermal detection — can be any heat source, not a confirmed wildfire.</span>`);
+      });
+    }
+  },
+  async renderSmokeLayer(){
+    if(!App.mapInited) return;
+    const layer=App.mapLayers.smoke; if(!layer) return; layer.clearLayers();
+    const btn=UI.el('mapSmoke'); if(btn) btn.textContent = App.smokeOn ? "🌫️ Smoke: on" : "🌫️ Smoke: off";
+    if(!App.smokeOn || !L.heatLayer) return;
+    const b=App.map.getBounds().pad(0.15), rows=9, cols=9;
+    const s=b.getSouth(), n=b.getNorth(), w=b.getWest(), e=b.getEast();
+    const latStep=(n-s)/rows, lonStep=(e-w)/cols, pts=[];
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) pts.push({lat:s+latStep*(r+0.5), lon:w+lonStep*(c+0.5)});
+    let grid; try{ grid=await Data.smokeGrid(pts); }catch(err){ return; }
+    if(!App.smokeOn) return;                          // user may have toggled off during fetch
+    // Only paint haze where air is worse than "good" — clean areas stay clear (not a green blanket).
+    const heat=[];
+    grid.forEach(g=>{ const pm=g.pm; if(pm==null) return;
+      const intensity=Math.max(0, Math.min(1, (pm-10)/140));  // ~moderate → hazardous
+      if(intensity>0.02) heat.push([g.lat, g.lon, intensity]); });
+    if(!heat.length) return;                          // clear air: no overlay at all
+    const radiusPx=Math.max(34, App.map.getSize().x/cols*1.05);
+    L.heatLayer(heat, { radius:radiusPx, blur:radiusPx*0.9, max:1, minOpacity:0.22,
+      gradient:{0.0:'#ffe08a', 0.25:'#ffcf3f', 0.5:'#ff9838', 0.75:'#ff4d4d', 1.0:'#b06bff'} }).addTo(layer);
   },
   windIcon(headingDeg, size, op){
     return L.divIcon({ className:'', iconSize:[size,size], iconAnchor:[size/2,size/2],
@@ -1433,8 +1638,8 @@ const UI = {
         (f.url?`<br><a href="${esc(f.url)}" target="_blank" rel="noopener">Official BC Wildfire info ↗</a>`:"")+
         `<br><span style="color:${C('--dim')};font-size:11px">Updated ${ago(b.ts.fires)}</span>`);
     });
-    UI.renderWind();
-    UI.el('mapStamp').textContent = `Fires updated ${ago(b.ts.fires)} · evacuation areas updated ${ago(b.ts.evac)}`;
+    UI.renderWind(); UI.renderSmokeLayer(); UI.renderHotspots();
+    UI.el('mapStamp').textContent = `Fires ${ago(b.ts.fires)} · hotspots ${ago(b.ts.hot)} · evacuation areas ${ago(b.ts.evac)}. Smoke = modelled PM2.5 (coarse); hotspots = VIIRS satellite heat (can be any source).`;
   },
 
   /* ---- Places sheet ---- */
